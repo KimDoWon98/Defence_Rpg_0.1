@@ -1,0 +1,57 @@
+import Skill as sk;
+import Story as st;
+import Functions as fc;
+
+// 24 = 1초
+function onPluginStart() {
+    for (var index = 0; index < 20; index++) { //초반 영웅생성하는 트리거
+        if(index<12){
+            CreateUnitWithProperties(1, index+1, $L("Hero_1")+index, Force2, UnitProperty(invincible=true));}
+        if(index>=12){
+            CreateUnitWithProperties(1, index+1+2, $L("Hero_1")+index, Force2, UnitProperty(invincible=true));}
+    }
+    foreach(cp : EUDLoopPlayer("Human", Force1)) { 
+        setcurpl(cp);
+        st.playerCount++;
+        fc.stage_round[cp]=1; // 1까지만듬
+        st.Story_timer[cp]=899; // 800까지 만듬
+        st.Round_timer[cp]=0;
+        fc.stage_on[cp]=0;
+        st.Select_timer[cp]=0;
+        CreateUnitWithProperties(1, 0, "Hero_selectmove", cp, UnitProperty(invincible=true));
+        sk.job[cp]=0;
+        sk.skill_Q[cp]=0;
+        sk.skill_W[cp]=0;
+        sk.skill_E[cp]=0;
+        sk.skill_R[cp]=0;
+    }
+    foreach(cp : EUDLoopPlayer("Computer", Force2)) { 
+        setcurpl(cp);
+        st.Story_timer[cp]=0;
+        st.Round_timer[cp]=899; //899
+        fc.stage_round[cp]=1; //1
+        fc.stage_on[cp]=0;
+        fc.Unit_timer[cp]=0;
+    }
+}
+
+function beforeTriggerExec() {
+    SetMemory(0x6509A0, SetTo, 0);//EUD터보
+}
+
+function afterTriggerExec() {
+    foreach(cp : EUDLoopPlayer("Human", Force1)) { 
+        setcurpl(cp);
+        if (fc.stage_round[cp] < 2){st.Opening(cp);} // 오프닝
+        if (fc.stage_round[cp] ==2){st.Select_Hero(cp);} // 직업고르기
+        if (fc.stage_round[cp] >=3){st.Game_Round_1(cp);} // 1스테이지
+        if (sk.skill_timer[cp] >0){sk.skill_timer[cp] +=1;} // 스킬루프
+        if (fc.stage_round[cp] >=0){sk.skill_loop(cp); fc.Hero_Skill_imformation(cp);} // 스킬루프, 에러출력
+    }
+    
+    //컴퓨터 플레이어 루프
+    foreach(cp : EUDLoopPlayer("Computer", Force2)) {
+        setcurpl(cp);
+        st.ComputerStory(cp);
+    }
+}

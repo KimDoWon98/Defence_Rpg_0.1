@@ -1,0 +1,553 @@
+import main as main;
+import Skill as sk;
+import Story as st;
+
+const stage_round     =PVariable(); // 스테이지 표기 빅토리체크할 때 사용되는 로케이션번호메기기
+const stage_on        =PVariable(); // 스테이지 진행중인지 아닌지 0이면 아니고 1이면 디펜스스테이지, 2면 전투스테이지
+const Unit_timer      =PVariable(); // 스테이지 유닛 생산하는 타이머
+var Unit_many         =0; // 컴퓨터유닛갯수
+
+function VictoryCheck(cp,round,on){
+    switch(round)
+    {
+        case 0:
+            if (playerexist(cp)){setcurpl(cp);
+                if (Bring(Force2, AtLeast, 1, "Any unit", $L('Tutorial_1')))
+                {KillUnit("Any unit", cp); KillUnitAt(All, "Men", $L('Tutorial_1'), cp);
+                return false;
+                /* Defeat(); */}
+            if (Bring(Force2, Exactly, 0, "Any unit", $L('Tutorial_1'))) {stage_round[cp] += 1; stage_on[cp] =0; return false;}}
+            break;
+        case 1:
+            if (playerexist(cp)){setcurpl(cp);
+                if (Bring(Force2, AtLeast, 1, "Any unit", $L('Tutorial_2')))
+                {KillUnit("Any unit", cp); KillUnitAt(All, "Men", $L('Tutorial_2'), cp); 
+                return false;
+                /* Defeat(); */}
+            if (Bring(Force2, Exactly, 0, "Any unit", $L('Tutorial_2'))) {stage_round[cp] += 1; stage_on[cp] =0; return true;}}
+            break;
+        // 여기까지가 튜토리얼
+        case 7:
+            if (playerexist(cp)){setcurpl(cp);
+                if (Bring(Force2, AtLeast, 1, "Any unit", $L('Stage_1'))){ // 패배했을 때
+                    KillUnit("Any unit", cp);
+                    KillUnitAt(All, "Men", $L('Anywhere'), cp);
+                    st.Round_timer[cp]  = 0;
+                    stage_on[cp]        = 0;
+                    return false;
+                    /* Defeat(); */ }
+                if (Bring(Force2, Exactly, 0, "Any unit", $L('Stage_1'))) {
+                    st.Story_timer[cp]  = 0;
+                    stage_round[cp]     += 1;
+                    st.Round_timer[cp]  = 0;
+                    stage_on[cp]        = 0;
+                    MoveUnit(All, sk.job[cp], cp, "Anywhere", $L('Storymove_4'));
+                    return true;}}
+            break;
+        case 12:
+            if (playerexist(cp)){setcurpl(cp);
+                if (Bring(Force2, AtLeast, 1, "Any unit", $L('Stage_2'))){ // 패배했을 때
+                    KillUnit("Any unit", cp);
+                    KillUnitAt(All, "Men", $L('Anywhere'), cp);
+                    st.Round_timer[cp]  = 0;
+                    stage_on[cp]        = 0;
+                    return false;
+                    /* Defeat(); */ }
+                if (Bring(Force2, Exactly, 0, "Any unit", $L('Stage_2'))) {
+                    st.Story_timer[cp]  = 0;
+                    stage_round[cp]     += 1;
+                    st.Round_timer[cp]  = 0;
+                    stage_on[cp]        = 0;
+                    MoveUnit(All, sk.job[cp], cp, "Anywhere", $L('Storymove_5'));
+                    return true;}}
+            break;
+        case 17:
+            if (playerexist(cp)){setcurpl(cp);
+                if (Bring(Force2, AtLeast, 1, "Any unit", $L('Stage_3'))){ // 패배했을 때
+                    KillUnit("Any unit", cp);
+                    KillUnitAt(All, "Men", $L('Anywhere'), cp);
+                    st.Round_timer[cp]  = 0;
+                    stage_on[cp]        = 0;
+                    return false;
+                    /* Defeat(); */ }
+                if (Bring(Force2, Exactly, 0, "Any unit", $L('Stage_3'))) {
+                    st.Story_timer[cp]  = 0;
+                    stage_round[cp]     += 1;
+                    st.Round_timer[cp]  = 0;
+                    stage_on[cp]        = 0;
+                    MoveUnit(All, sk.job[cp], cp, "Anywhere", $L('Storymove_6'));
+                    return true;}}
+            break;
+        case 22:
+            if (playerexist(cp)){setcurpl(cp);
+                if (Bring(Force2, AtLeast, 1, "Any unit", $L('Stage_4'))){ // 패배했을 때
+                    KillUnit("Any unit", cp);
+                    KillUnitAt(All, "Men", $L('Anywhere'), cp);
+                    st.Round_timer[cp]  = 0;
+                    stage_on[cp]        = 0;
+                    return false;
+                    /* Defeat(); */ }
+                if (Bring(Force2, Exactly, 0, "Any unit", $L('Stage_4'))) {
+                    st.Story_timer[cp]  = 0;
+                    stage_round[cp]     += 1;
+                    st.Round_timer[cp]  = 0;
+                    stage_on[cp]        = 0;
+                    MoveUnit(All, sk.job[cp], cp, "Anywhere", $L('Storymove_6'));
+                    return true;}}
+            break;
+        // 보스 스테이지
+        default:
+        if(round>=3 && round <=6){
+            if (playerexist(cp)){setcurpl(cp);
+                if (Bring(Force2, AtLeast, 1, "Any unit", $L('Stage_1'))){ // 패배했을 때
+                    KillUnit("Any unit", cp);
+                    KillUnitAt(All, "Men", $L('Anywhere'), cp);
+                    st.Round_timer[cp]  = 0;
+                    stage_on[cp]        = 0;
+                    return false;
+                    /* Defeat(); */ }
+                if (Bring(Force2, Exactly, 0, "Any unit", $L('Stage_1'))) {
+                    st.Story_timer[cp]  = 0;
+                    stage_round[cp]     += 1;
+                    st.Round_timer[cp]  = 0;
+                    stage_on[cp]        = 0;
+                    return true;}}
+            }
+        else if(round>=8 && round <=11){
+            if (playerexist(cp)){setcurpl(cp);
+                if (Bring(Force2, AtLeast, 1, "Any unit", $L('Stage_2'))){ // 패배했을 때
+                    KillUnit("Any unit", cp);
+                    KillUnitAt(All, "Men", $L('Stage_2'), cp);
+                    st.Round_timer[cp]  = 0;
+                    stage_on[cp]        = 0;
+                    return false;
+                    /* Defeat(); */ }
+                if (Bring(Force2, Exactly, 0, "Any unit", $L('Stage_2'))) {
+                    st.Story_timer[cp]  = 0;
+                    stage_round[cp]     += 1;
+                    st.Round_timer[cp]  = 0;
+                    stage_on[cp]        = 0;
+                    return true;}}
+            }
+        else if(round>=13 && round <=16){
+            if (playerexist(cp)){setcurpl(cp);
+                if (Bring(Force2, AtLeast, 1, "Any unit", $L('Stage_3'))){ // 패배했을 때
+                    KillUnit("Any unit", cp);
+                    KillUnitAt(All, "Men", $L('Anywhere'), cp);
+                    st.Round_timer[cp]  = 0;
+                    stage_on[cp]        = 0;
+                    return false;
+                    /* Defeat(); */ }
+                if (Bring(Force2, Exactly, 0, "Any unit", $L('Stage_3'))) {
+                    st.Story_timer[cp]  = 0;
+                    stage_round[cp]     += 1;
+                    st.Round_timer[cp]  = 0;
+                    stage_on[cp]        = 0;
+                    return true;}}
+            }
+        else if(round>=17 && round <=21){
+            if (playerexist(cp)){setcurpl(cp);
+                if (Bring(Force2, AtLeast, 1, "Any unit", $L('Stage_4'))){ // 패배했을 때
+                    KillUnit("Any unit", cp);
+                    KillUnitAt(All, "Men", $L('Anywhere'), cp);
+                    st.Round_timer[cp]  = 0;
+                    stage_on[cp]        = 0;
+                    return false;
+                    /* Defeat(); */ }
+                if (Bring(Force2, Exactly, 0, "Any unit", $L('Stage_4'))) {
+                    st.Story_timer[cp]  = 0;
+                    stage_round[cp]     += 1;
+                    st.Round_timer[cp]  = 0;
+                    stage_on[cp]        = 0;
+                    return true;}}
+            }
+        break;}
+}
+
+function Hero_imforDisplay(i){
+    switch (i) {
+        case 1: // 직업번호가 0일경우
+            st.s.appendf("\x13\x1C==========\x04버서커\x1C==========\n\x13\x04잃은 체력에 비례해 강력해지는 근접딜러입니다.\n");
+            st.s.appendf("\x13\x04<공격력> 상\n");
+            st.s.appendf("\x13\x04<생존력> 하\n");
+            st.s.appendf("\x13\x04<난이도> 상\n");
+            st.s.appendf("\x13\x1C=========================\n");
+            break;
+        case 2:
+            st.s.appendf("\x13\x1C========\x04크루세이더\x1C========\n\x13\x04스킬로 콤보를 쌓고 콤보 갯수를 소모해 강력한 딜을 넣는 딜탱커입니다.\n");
+            st.s.appendf("\x13\x04<공격력> 중\n");
+            st.s.appendf("\x13\x04<생존력> 중\n");
+            st.s.appendf("\x13\x04<난이도> 중\n");
+            st.s.appendf("\x13\x1C=========================\n");
+            break;
+        case 3:
+            st.s.appendf("\x13\x1C=========\x04대장장이\x1C=========\n\x13\x04강력한 군중제어기를 가진 탱커입니다.\n");
+            st.s.appendf("\x13\x04<공격력> 하\n");
+            st.s.appendf("\x13\x04<생존력> 상\n");
+            st.s.appendf("\x13\x04<난이도> 하\n");
+            st.s.appendf("\x13\x1C=========================\n");
+            break;
+        case 4:
+            st.s.appendf("\x13\x1C==========\x04팔라딘\x1C==========\n\x13\x04자체 회복력이 뛰어난 탱서포터입니다.\n");
+            st.s.appendf("\x13\x04<공격력> 중\n");
+            st.s.appendf("\x13\x04<생존력> 상\n");
+            st.s.appendf("\x13\x04<난이도> 하\n");
+            st.s.appendf("\x13\x1C=========================\n");
+            break;
+        case 5:
+            st.s.appendf("\x13\x1C==========\x04서머너\x1C==========\n\x13\x04선택하는 소환수에 따라 포지션을 정할 수 있는 물량직업입니다.\n");
+            st.s.appendf("\x13\x04<공격력> ???\n");
+            st.s.appendf("\x13\x04<생존력> ???\n");
+            st.s.appendf("\x13\x04<난이도> 상\n");
+            st.s.appendf("\x13\x1C=========================\n");
+            break;
+        case 6:
+            st.s.appendf("\x13\x1C=========\x04강령술사\x1C=========\n\x13\x04디버프스킬 사용하는 딜서포터입니다.\n");
+            st.s.appendf("\x13\x04<공격력> 중\n");
+            st.s.appendf("\x13\x04<생존력> 중\n");
+            st.s.appendf("\x13\x04<난이도> 하\n");
+            st.s.appendf("\x13\x1C=========================\n");
+            break;
+        case 7:
+            st.s.appendf("\x13\x1C=========\x04프리스트\x1C=========\n\x13\x04회복스킬 위주의 유틸서포터입니다.\n");
+            st.s.appendf("\x13\x04<공격력> 하\n");
+            st.s.appendf("\x13\x04<생존력> 상\n");
+            st.s.appendf("\x13\x04<난이도> 중\n");
+            st.s.appendf("\x13\x1C=========================\n");
+            break;
+        case 8:
+            st.s.appendf("\x13\x1C=========\x04원소술사\x1C=========\n\x13\x04랜덤으로 뽑는 원소에 따라 스킬이 달라지는 메인딜러입니다.\n");
+            st.s.appendf("\x13\x04<공격력> 상\n");
+            st.s.appendf("\x13\x04<생존력> 하\n");
+            st.s.appendf("\x13\x04<난이도> 상\n");
+            st.s.appendf("\x13\x1C=========================\n");
+            break;
+        case 9:
+            st.s.appendf("\x13\x1C==========\x04어쌔신\x1C==========\n\x13\x04단일기에 최적화 된 근접딜러입니다.\n");
+            st.s.appendf("\x13\x04<공격력> 상\n");
+            st.s.appendf("\x13\x04<생존력> 하\n");
+            st.s.appendf("\x13\x04<난이도> 상\n");
+            st.s.appendf("\x13\x1C=========================\n");
+            break;
+        case 10:
+            st.s.appendf("\x13\x1C===========\x04해적\x1C===========\n\x13\x04골드를 수급하여 파티원에게 도움이 되는 원거리딜러입니다.\n");
+            st.s.appendf("\x13\x04<공격력> 중\n");
+            st.s.appendf("\x13\x04<생존력> 중\n");
+            st.s.appendf("\x13\x04<난이도> 하\n");
+            st.s.appendf("\x13\x1C=========================\n");
+            break;
+        case 11:
+            st.s.appendf("\x13\x1C=========\x04소울이터\x1C=========\n\x13\x04적을 처치하면 영혼을 획득합니다 영혼수에 비례해 강해지는 왕귀형딜러입니다.\n");
+            st.s.appendf("\x13\x04<공격력> 상\n");
+            st.s.appendf("\x13\x04<생존력> 하\n");
+            st.s.appendf("\x13\x04<난이도> 하\n");
+            st.s.appendf("\x13\x1C=========================\n");
+            break;
+        case 12:
+            st.s.appendf("\x13\x1C==========\x04복수자\x1C==========\n\x13\x04변신하여 상황에 맞게 사용가능한 근/원딜러입니다.\n");
+            st.s.appendf("\x13\x04<공격력> 중\n");
+            st.s.appendf("\x13\x04<생존력> 상\n");
+            st.s.appendf("\x13\x04<난이도> 중\n");
+            st.s.appendf("\x13\x1C=========================\n");
+            break;
+        case 13:
+            st.s.appendf("\x13\x1C==========\x04레인져\x1C==========\n\x13\x04무난한 성능의 원거리딜러입니다.\n");
+            st.s.appendf("\x13\x04<공격력> 중\n");
+            st.s.appendf("\x13\x04<생존력> 중\n");
+            st.s.appendf("\x13\x04<난이도> 하\n");
+            st.s.appendf("\x13\x1C=========================\n");
+            break;
+        case 14:
+            st.s.appendf("\x13\x1C===========\x04헌터\x1C===========\n\x13\x04웨이브 몬스터를 수집가능한 물량딜러입니다.\n");
+            st.s.appendf("\x13\x04<공격력> 중\n");
+            st.s.appendf("\x13\x04<생존력> 중\n");
+            st.s.appendf("\x13\x04<난이도> 하\n");
+            st.s.appendf("\x13\x1C=========================\n");
+            break;
+        case 15:
+            st.s.appendf("\x13\x1C=========\x04건슬링어\x1C=========\n\x13\x04같은 스킬을 반복하여 사용하면 좋은 원거리딜러입니다.\n");
+            st.s.appendf("\x13\x04<공격력> 중\n");
+            st.s.appendf("\x13\x04<생존력> 중\n");
+            st.s.appendf("\x13\x04<난이도> 중\n");
+            st.s.appendf("\x13\x1C=========================\n");
+            break;
+        case 16:
+            st.s.appendf("\x13\x1C=========\x04스나이퍼\x1C=========\n\x13\x04같은자리에 있을수록 강해지는 원거리딜러입니다.\n");
+            st.s.appendf("\x13\x04<공격력> 상\n");
+            st.s.appendf("\x13\x04<생존력> 하\n");
+            st.s.appendf("\x13\x04<난이도> 상\n");
+            st.s.appendf("\x13\x1C=========================\n");
+            break;
+        case 17:
+            st.s.appendf("\x13\x1C==========\x04이모탈\x1C==========\n\x13\x04죽을 수록 강해지는 근딜러입니다.\n");
+            st.s.appendf("\x13\x04<공격력> 상\n");
+            st.s.appendf("\x13\x04<생존력> 하\n");
+            st.s.appendf("\x13\x04<난이도> 상\n");
+            st.s.appendf("\x13\x1C=========================\n");
+            break;
+        case 18:
+            st.s.appendf("\x13\x1C===========\x04권왕\x1C===========\n\x13\x04선딜이 길지만 강력한 한방이 있는 한방딜러입니다.\n");
+            st.s.appendf("\x13\x04<공격력> 상\n");
+            st.s.appendf("\x13\x04<생존력> 하\n");
+            st.s.appendf("\x13\x04<난이도> 중\n");
+            st.s.appendf("\x13\x1C=========================\n");
+            break;
+        case 19:
+            st.s.appendf("\x13\x1C==========\x04파이터\x1C==========\n\x13\x04스킬사용 중 다른스킬을 사용하면 추가타가 날아가는 콤보형딜러입니다.\n");
+            st.s.appendf("\x13\x04<공격력> 중\n");
+            st.s.appendf("\x13\x04<생존력> 중\n");
+            st.s.appendf("\x13\x04<난이도> 중\n");
+            st.s.appendf("\x13\x1C=========================\n");
+            break;
+        case 20:
+            st.s.appendf("\x13\x1C===========\x04무명\x1C===========\n\x13\x04평타가 없고 미지의 스킬을 사용하는 범위딜러입니다.\n");
+            st.s.appendf("\x13\x04<공격력> 상\n");
+            st.s.appendf("\x13\x04<생존력> 하\n");
+            st.s.appendf("\x13\x04<난이도> 중\n");
+            st.s.appendf("\x13\x1C=========================\n");
+            break;
+        default:
+            break;
+    }
+}
+function Hero_imformation(cp){
+    for (var i = 1; i < 21; i++){
+        const ptr, epd = dwepdread_epd(EPD(0x6284E8) + 12*cp); // 유닛 오프셋 읽어오는 함수
+        if(i<13){
+            if (ptr > 0){
+            if (MemoryEPD(epd + 0x64 / 4, Exactly, $U(i))){ // 현재 선택된 유닛이
+                Hero_imforDisplay(i);
+            }}}
+        if(i>=13)
+        {if (ptr > 0){
+            if (MemoryEPD(epd + 0x64 / 4, Exactly, $U(i+2))){ // 현재 선택된 유닛이 i+2를 해주는 이유는 13번이랑 14번은 유닛커스텀이 안됨..
+                Hero_imforDisplay(i);
+            }}}
+    }
+}
+
+function Hero_select(cp){ // 이거 문제있음 로케이션이 존나커서 조금만 안에 겹쳐버리면 트리거작동되버림
+    for (var i = 1; i < 21; i++){
+        if(Bring(cp, Exactly, 1, 0, $L("Hero_1")+i-1))
+        {   if(i<13){
+            if(Bring(Force2, Exactly, 1, i, $L("Hero_1")+i-1)){{ //
+                GiveUnits(1, i, Force2, $L("Hero_1")+i-1, cp);
+                RemoveUnitAt(1, 0, $L("Hero_1")+i-1, cp);
+                MoveUnit(All, i, cp, $L("Hero_1")+i-1, "Storymove_3");
+                sk.job[cp]=i; st.isSelected++;}}}
+            if(i>=13){
+                if(Bring(Force2, Exactly, 1, i+2, $L("Hero_1")+i-1)){
+                GiveUnits(1, i+2, Force2, $L("Hero_1")+i-1, cp);
+                RemoveUnitAt(1, 0, $L("Hero_1")+i-1, cp);
+                MoveUnit(All, i+2, cp, $L("Hero_1")+i-1, "Storymove_3");
+                sk.job[cp]=i; st.isSelected++;}}
+        }
+    }
+}
+function Hero_randomselect(cp){
+    once randomize();
+    var randcreate = (rand() % 20)+1; // 20가지의 직업
+    for(var i = 1; i < 21; i++) // 0번은 시민(초보자)이기 때문에 1부터시작
+    {
+    if(randcreate==i && Bring(Force2, Exactly, 1, i, $L(13)+i))
+    {
+        if(i<13)
+        {GiveUnits(1, i, Force2, 13+i, cp);
+        RemoveUnitAt(1, 0, "Anywhere", cp);
+        MoveUnit(All, i, cp, 13+i, "Storymove_3");
+        sk.job[cp]=i; st.removeText(); st.isSelected++;}
+        if(i>=13)
+        {GiveUnits(1, i+2, Force2, 13+i, cp);
+        RemoveUnitAt(1, 0, "Anywhere", cp);
+        MoveUnit(All, i+2, cp, 13+i, "Storymove_3");
+        sk.job[cp]=i; st.removeText(); st.isSelected++;}}
+    }
+}
+
+function Hero_Skill_imformation(cp){ // 에러출력
+    switch(sk.job[cp]) {
+    case 1: // 직업번호가 1일 경우
+        st.error.insert(0);
+        st.error.appendf("\x04《 광전사 》 Q: {} W: {} E: {} R: {} F: {}", sk.skill_Q[cp] / 24, sk.skill_W[cp] / 24, sk.skill_E[cp] / 24, sk.skill_R[cp] / 24, sk.skill_F[cp] / 24);
+        eprintf("{:t}", st.error.epd);
+        break;
+    case 2: // 직업번호가 2일 경우
+        st.error.insert(0);
+        st.error.appendf("\x04《 크루세이더 》 Q: {} W: {} E: {} R: {} F: {} 『스택』:{}", sk.skill_Q[cp] / 24, sk.skill_W[cp] / 24, sk.skill_E[cp] / 24, sk.skill_R[cp] / 24, sk.skill_F[cp] / 24, sk.stack[cp]);
+        eprintf("{:t}", st.error.epd);
+        break;
+    case 3: // 직업번호가 3일 경우
+        st.error.insert(0);
+        st.error.appendf("\x04《 대장장이 》 Q: {} W: {} E: {} R: {} F: {}", sk.skill_Q[cp] / 24, sk.skill_W[cp] / 24, sk.skill_E[cp] / 24, sk.skill_R[cp] / 24, sk.skill_F[cp] / 24);
+        eprintf("{:t}", st.error.epd);
+        break;
+    case 4: // 직업번호가 4일 경우
+        st.error.insert(0);
+        st.error.appendf("\x04《 팔라딘 》 Q: {} W: {} E: {} R: {} F: {}", sk.skill_Q[cp] / 24, sk.skill_W[cp] / 24, sk.skill_E[cp] / 24, sk.skill_R[cp] / 24, sk.skill_F[cp] / 24);
+        eprintf("{:t}", st.error.epd);
+        break;
+    case 5: // 직업번호가 5일 경우
+        st.error.insert(0);
+        st.error.appendf("\x04《 소환사 》 Q: {} W: {} E: {} R: {} F: {}", sk.skill_Q[cp] / 24, sk.skill_W[cp] / 24, sk.skill_E[cp] / 24, sk.skill_R[cp] / 24, sk.skill_F[cp] / 24);
+        eprintf("{:t}", st.error.epd);
+        break;
+    case 6: // 직업번호가 6일 경우
+        st.error.insert(0);
+        st.error.appendf("\x04《 강령술사 》 Q: {} W: {} E: {} R: {} F: {}", sk.skill_Q[cp] / 24, sk.skill_W[cp] / 24, sk.skill_E[cp] / 24, sk.skill_R[cp] / 24, sk.skill_F[cp] / 24);
+        eprintf("{:t}", st.error.epd);
+        break;
+    case 7: // 직업번호가 7일 경우
+        st.error.insert(0);
+        st.error.appendf("\x04《 프리스트 》 Q: {} W: {} E: {} R: {} F: {}", sk.skill_Q[cp] / 24, sk.skill_W[cp] / 24, sk.skill_E[cp] / 24, sk.skill_R[cp] / 24, sk.skill_F[cp] / 24);
+        eprintf("{:t}", st.error.epd);
+        break;
+    case 8: // 직업번호가 8일 경우
+        st.error.insert(0);
+        st.error.appendf("\x04《 원소술사 》 Q: {} W: {} E: {} R: {} F: {}", sk.skill_Q[cp] / 24, sk.skill_W[cp] / 24, sk.skill_E[cp] / 24, sk.skill_R[cp] / 24, sk.skill_F[cp] / 24);
+        eprintf("{:t}", st.error.epd);
+        break;
+    case 9: // 직업번호가 9일 경우
+        st.error.insert(0);
+        st.error.appendf("\x04《 암살자 》 Q: {} W: {} E: {} R: {} F: {}", sk.skill_Q[cp] / 24, sk.skill_W[cp] / 24, sk.skill_E[cp] / 24, sk.skill_R[cp] / 24, sk.skill_F[cp] / 24);
+        eprintf("{:t}", st.error.epd);
+        break;
+    case 10: // 직업번호가 10일 경우
+        st.error.insert(0);
+        st.error.appendf("\x04《 해적 》 Q: {} W: {} E: {} R: {} F: {}", sk.skill_Q[cp] / 24, sk.skill_W[cp] / 24, sk.skill_E[cp] / 24, sk.skill_R[cp] / 24, sk.skill_F[cp] / 24);
+        eprintf("{:t}", st.error.epd);
+        break;
+    case 11: // 직업번호가 11일 경우
+        st.error.insert(0);
+        st.error.appendf("\x04《 소울이터 》 Q: {} W: {} E: {} R: {} F: {}", sk.skill_Q[cp] / 24, sk.skill_W[cp] / 24, sk.skill_E[cp] / 24, sk.skill_R[cp] / 24, sk.skill_F[cp] / 24);
+        eprintf("{:t}", st.error.epd);
+        break;
+    case 12: // 직업번호가 12일 경우
+        st.error.insert(0);
+        st.error.appendf("\x04《 복수자 》 Q: {} W: {} E: {} R: {} F: {}", sk.skill_Q[cp] / 24, sk.skill_W[cp] / 24, sk.skill_E[cp] / 24, sk.skill_R[cp] / 24, sk.skill_F[cp] / 24);
+        eprintf("{:t}", st.error.epd);
+        break;
+    case 13: // 직업번호가 13일 경우
+        st.error.insert(0);
+        st.error.appendf("\x04《 레인져 》 Q: {} W: {} E: {} R: {} F: {}", sk.skill_Q[cp] / 24, sk.skill_W[cp] / 24, sk.skill_E[cp] / 24, sk.skill_R[cp] / 24, sk.skill_F[cp] / 24);
+        eprintf("{:t}", st.error.epd);
+        break;
+    case 14: // 직업번호가 14일 경우
+        st.error.insert(0);
+        st.error.appendf("\x04《 헌터 》 Q: {} W: {} E: {} R: {} F: {}", sk.skill_Q[cp] / 24, sk.skill_W[cp] / 24, sk.skill_E[cp] / 24, sk.skill_R[cp] / 24, sk.skill_F[cp] / 24);
+        eprintf("{:t}", st.error.epd);
+        break;
+    case 15: // 직업번호가 15일 경우
+        st.error.insert(0);
+        st.error.appendf("\x04《 건슬링어 》 Q: {} W: {} E: {} R: {} F: {}", sk.skill_Q[cp] / 24, sk.skill_W[cp] / 24, sk.skill_E[cp] / 24, sk.skill_R[cp] / 24, sk.skill_F[cp] / 24);
+        eprintf("{:t}", st.error.epd);
+        break;
+    case 16: // 직업번호가 16일 경우
+        st.error.insert(0);
+        st.error.appendf("\x04《 스나이퍼 》 Q: {} W: {} E: {} R: {} F: {}", sk.skill_Q[cp] / 24, sk.skill_W[cp] / 24, sk.skill_E[cp] / 24, sk.skill_R[cp] / 24, sk.skill_F[cp] / 24);
+        eprintf("{:t}", st.error.epd);
+        break;
+    case 17: // 직업번호가 17일 경우
+        st.error.insert(0);
+        st.error.appendf("\x04《 불멸자 》 Q: {} W: {} E: {} R: {} F: {}", sk.skill_Q[cp] / 24, sk.skill_W[cp] / 24, sk.skill_E[cp] / 24, sk.skill_R[cp] / 24 , sk.skill_F[cp] / 24);
+        eprintf("{:t}", st.error.epd);
+            break;
+    case 18: // 직업번호가 18일 경우
+        st.error.insert(0);
+        st.error.appendf("\x04《 권왕 》 Q: {} W: {} E: {} R: {} F: {}", sk.skill_Q[cp] / 24, sk.skill_W[cp] / 24, sk.skill_E[cp] / 24, sk.skill_R[cp] / 24, sk.skill_F[cp] / 24);
+        eprintf("{:t}", st.error.epd);
+        break;
+    case 19: // 직업번호가 19일 경우
+        st.error.insert(0);
+        st.error.appendf("\x04《 파이터 》 Q: {} W: {} E: {} R: {} F: {}", sk.skill_Q[cp] / 24, sk.skill_W[cp] / 24, sk.skill_E[cp] / 24, sk.skill_R[cp] / 24, sk.skill_F[cp] / 24);
+        eprintf("{:t}", st.error.epd);
+        break;
+    case 20: // 직업번호가 20일 경우
+        st.error.insert(0);
+        st.error.appendf("\x04《 무명 》 Q: {} W: {} E: {} R: {} F: {}", sk.skill_Q[cp] / 24, sk.skill_W[cp] / 24, sk.skill_E[cp] / 24, sk.skill_R[cp] / 24, sk.skill_F[cp] / 24);
+        eprintf("{:t}", st.error.epd);
+        break;
+        default:
+            break;
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////// 컴퓨터트리거
+function ComCheck(cp){
+    st.Story_timer[cp]=0;
+    stage_round[cp]++;
+    stage_on[cp]=0;
+    Unit_timer[cp]=0;
+    Unit_many = 0;
+}
+
+function MoveUnitsInLoop(cp,loc) {
+    if (Bring(cp, AtLeast, 1, "Men", $L(loc))) {
+        Order("Men", cp, $L(loc), Move, $L(loc + 1));
+    }
+    if (Bring(cp, AtLeast, 1, "Men", $L(loc + 1))) {
+        Order("Men", cp, $L(loc + 1), Move, $L(loc + 2));
+    }
+    if (Bring(cp, AtLeast, 1, "Men", $L(loc + 2))) {
+        Order("Men", cp, $L(loc + 2), Move, $L(loc + 3));
+    }
+    if (Bring(cp, AtLeast, 1, "Men", $L(loc + 3))) {
+        Order("Men", cp, $L(loc + 3), Move, $L(loc));
+    }
+}
+
+function SpawnAndMoveUnits(cp,unitType,loc,unitLimit) {
+    if (Unit_timer[cp] % 12 == 0 && Unit_many <= unitLimit && stage_on[cp] == 1) {
+        Unit_many++;
+        CreateUnit(1, unitType, $L(loc), cp);
+    }
+    if (Unit_timer[cp] % 12 == 0 && Unit_many <= unitLimit && stage_on[cp] == 2) {
+        Unit_many += 2;
+        CreateUnit(1, unitType, $L(loc)+4, cp);
+        CreateUnit(1, unitType, $L(loc)+5, cp);
+        CreateUnit(1, unitType, $L(loc)+6, cp);
+        CreateUnit(1, unitType, $L(loc)+7, cp);
+    }
+    if (Unit_timer[cp] % 12 == 0 && Unit_many <= unitLimit && stage_on[cp] == 3) {
+        Unit_many++;
+        CreateUnit(1, unitType, $L(loc), cp);
+    }
+    MoveUnitsInLoop(cp, loc);
+}
+
+function ComGame_Round_1(cp, Loc) {
+    Unit_timer[cp] += 1;
+    switch(stage_round[cp]) {
+        case 0:
+            SpawnAndMoveUnits(cp, 37, $L("Location 2"), 3);
+            break;
+
+        case 1:
+            if (Unit_timer[cp] % 12 == 0 && Unit_many <= 3 && stage_on[cp] == 2) {
+                Unit_many++;
+                CreateUnit(1, "Devouring One", $L("Location 8"), cp);
+                CreateUnit(1, "Devouring One", $L("Location 9"), cp);
+                Order("Men", cp, 8, Attack, $L("Storymove_2"));
+                Order("Men", cp, 9, Attack, $L("Storymove_2"));
+            }
+            break;
+        /// 여기서부터 1라운드
+            default:
+            if (stage_round[cp] >= 3 && stage_round[cp] <= 7) {
+                const i = 37 + (stage_round[cp] - 3); // i 값을 stage_round에 맞게 계산
+                SpawnAndMoveUnits(cp, i, Loc, 3);
+            }
+            else if (stage_round[cp] >= 8 && stage_round[cp] <= 12) {
+                const i = 37 + (stage_round[cp] - 3);
+                SpawnAndMoveUnits(cp, i, Loc+10, 3);
+            }
+            else if (stage_round[cp] >= 13 && stage_round[cp] <= 17) {
+                const i = 37 + (stage_round[cp] - 3);
+                SpawnAndMoveUnits(cp, i, Loc+20, 3);
+            }
+            else if (stage_round[cp] >= 18 && stage_round[cp] <= 22) {
+                const i = 37 + (stage_round[cp] - 3);
+                SpawnAndMoveUnits(cp, i, Loc+31, 3); // 왜인진 모르겠지만 로케이션번호 64가 생성이 안되고 63 -> 65로 넘어가짐 그래서 1을 더해줌
+            }
+            break;
+    }
+}

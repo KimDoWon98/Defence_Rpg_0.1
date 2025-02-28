@@ -1,0 +1,291 @@
+import Skill as sk;
+import Functions as fc;
+import main as main;
+
+const Story_timer   = PVariable();
+const Round_timer   = PVariable(); // 라운드 타이머
+const s             = StringBuffer(1024);
+const error         = StringBuffer(218);
+const i             = [0, 100, 200, 350, 550, 600,   750, 900, 1000, 1200]; // 350~550: 튜토리얼1_시간 // 750~900 튜토리얼2_시간
+const Select_timer  = PVariable();
+var playerCount     = 0;
+var isSelected      = 0;
+
+function removeText() {
+    TextFX_Remove("Display");
+    TextFX_SetTimer("Display", SetTo, 0);
+}
+
+
+function Opening(cp) {
+    if (Story_timer[cp] >= 0) {
+        Story_timer[cp] += 1;
+    }
+    if (Story_timer[cp] > i[0] && Story_timer[cp] < i[1]) {
+        const tecolor = 4, 2, 0x1E, 5, 0;
+        s.fadeIn("\x13\x04『 \x19던전 디펜스 \x04』",
+        line = 2, color = tecolor, wait = 1, tag = py_str("Display"));
+    }
+    if (Story_timer[cp] == i[1]) {
+        removeText();
+    }
+
+    if (Story_timer[cp] > i[1] && Story_timer[cp] < i[2]) {
+        const tecolor = 4, 2, 0x1E, 5, 0;
+        s.fadeIn("\x13\x04잠시후.. 튜토리얼이 진행됩니다.\n\n\x13\x19【Tip】 던전 디펜스\x04는 알피지형 디펜스 입니다.",
+        line = 2, color = tecolor, wait = 1, tag = py_str("Display"));
+    }
+    if (Story_timer[cp] == i[2]) {
+        removeText();
+        CenterView($L('Storymove_1'));
+        CreateUnit(1, "Protoss Observer", "Storymove_1", cp);
+        KillUnit("Protoss Observer", cp);
+        CreateUnitWithProperties(1, 0, "Storymove_1", cp, UnitProperty(invincible=true));
+        sk.job[cp] = 0;
+    }
+
+    if (Story_timer[cp] > i[2] && Story_timer[cp] < i[3]) {
+        const tecolor = 4, 2, 0x1E, 5, 0;
+        s.fadeIn("\x13\x04『 \x111.디펜스 스테이지 \x04』\n\n\x13\x04일반 디펜스맵 처럼\n\x13\x04시간내에 모든 몬스터를 잡으면 생존입니다.\n\n\x13\x04스킬을 사용하여 잡아보세요!",
+        line = 2, color = tecolor, wait = 1, tag = py_str("Display"));
+    }
+    if (Story_timer[cp] == i[3]) {
+        removeText();
+        fc.stage_on[cp] = 1; // 튜토리얼1 시작
+    }
+    if (Story_timer[cp] == i[4]) {
+        fc.VictoryCheck(cp,fc.stage_round[cp],fc.stage_on[cp]); // 튜토리얼1 종료
+    }
+    if (Story_timer[cp] > i[4] && Story_timer[cp] < i[5]) { // 이거 패배해도 출력되니까 패배되면 나가라는 문구로 수정
+        const tecolor = 4, 2, 0x1E, 5, 0;
+        s.fadeIn("\x13\x04클리어!\n\n\x13\x04잠시후.. 다음 튜토리얼이 진행됩니다.\n\n\x13\x19【Tip】 던전 디펜스\x04는 \x11디펜스 스테이지\x04와 \x0F전투 스테이지 \04두 가지로 존재합니다.",
+        line = 2, color = tecolor, wait = 1, tag = py_str("Display"));
+    } // 1F 밝은 하늘색
+    if (Story_timer[cp] == i[5]) {
+        removeText();
+        CenterView($L('Storymove_2'));
+        CreateUnit(1, "Protoss Observer", "Storymove_2", cp);
+        KillUnit("Protoss Observer", cp);
+        MoveUnit(All, $U(0), cp, "Anywhere", "Storymove_2");
+        
+    }
+
+    if (Story_timer[cp] > i[5] && Story_timer[cp] < i[6]) {
+        const tecolor = 4, 2, 0x1E, 5, 0;
+        s.fadeIn("\x13\x04『 \x0F2.전투 스테이지\x04』\n\n\x13\x04몬스터가 플레이어를 공격합니다!\n\x13\x04시간내에 모든 몬스터를 잡으면 생존입니다.\n\n\x13\04스킬을 사용하여 잡아보세요!",
+        line = 2, color = tecolor, wait = 1, tag = py_str("Display"));
+    }
+    if (Story_timer[cp] == i[6]) {
+        removeText();
+        fc.stage_on[cp] = 2; // 튜토리얼2 시작
+    }
+    if (Story_timer[cp] == i[7]) {
+        fc.VictoryCheck(cp,fc.stage_round[cp],fc.stage_on[cp]); // 튜토리얼2 종료
+    }
+}
+function Select_Hero(cp){
+    if (Story_timer[cp] >= 0) {
+        Story_timer[cp] += 1;}
+    if (Story_timer[cp] > i[7] && Story_timer[cp] < i[8] && fc.stage_on[cp] == 0) {
+        const tecolor = 4, 2, 0x1E, 5, 0;
+        s.fadeIn("\x13\x04클리어!\n\n\x13\x04잠시후 직업 선택창으로 이동합니다.\n\n\x13\x19【Tip】 \x04스테이지 결정은 라운드마다 랜덤으로 설정됩니다.",
+        line = 2, color = tecolor, wait = 1, tag = py_str("Display"));
+    }
+    if (Story_timer[cp] == i[8] && fc.stage_on[cp] == 0 ){
+        if(Deaths(cp, Exactly, 1, 0)) // 시민이 죽었을 때
+        {
+            CreateUnit(1, 0, "Hero_selectmove", cp);
+            SetDeaths(cp, SetTo, 0, 0);
+        }
+        else if(Deaths(cp, Exactly, 0, 0))
+        {
+            // MoveUnit(All, 0, cp, "Anywhere", "Hero_selectmove");
+            SetInvincibility(true, 0, cp, "Anywhere");
+        }
+        removeText();
+        Select_timer[cp] = 24* 30; // 24가 1초고 뒤에 숫자가 설정
+        s.insert(0);
+        s.appendf("\x13\x1C《 \x04영웅을 선택하세요. {}초 후 자동 선택됩니다.\x1C》\n",Select_timer[cp]/24);
+        s.DisplayAt(0);
+        CenterView($L('Hero_selectmove'));
+    }
+    if (Story_timer[cp]> i[8] && Select_timer[cp]>0)
+    {   Select_timer[cp]--;
+        s.insert(0);
+        s.appendf("\x13\x1C《 \x04영웅을 선택하세요. {}초 후 자동 선택됩니다.\x1C》\n",Select_timer[cp]/24);
+        s.appendf("\x13\x1C《 \x04영웅을 클릭하면 설명이 나옵니다.\x1C》\n");
+        fc.Hero_imformation(cp);
+        s.DisplayAt(0);
+        fc.Hero_select(cp);
+    }
+    
+    if (Story_timer[cp]> i[8] && Select_timer[cp]==0){ // 아직 안골랐으면 랜덤셀렉
+        if(Bring(cp, Exactly, 1, 0, "Anywhere")){
+        fc.Hero_randomselect(cp);
+        }}
+    if (Story_timer[cp]> i[8] && Select_timer[cp]>0 && playerCount>isSelected)
+    {
+        if(Bring(cp, AtLeast, 1, "Men", "Stage_1"))
+        {
+        s.insert(0);
+        s.appendf("\x13\x1C《 \x04다른 플레이어를 기다리세요.\x1C》\n");
+        s.DisplayAt(0);
+        }
+    }
+    if (Story_timer[cp]> i[8] && playerCount==isSelected && fc.stage_on[cp]==0)
+    {
+        s.insert(0);
+        s.appendf("\x13\x04《모든 플레이어가 선택을 완료했습니다.》\n\n\x13\x04이제 본 게임을 시작합니다.\n\n\n\n\n");
+        s.DisplayAt(0);
+        Story_timer[cp]=0;
+        fc.stage_round[cp]=3;
+
+        Story_timer[7]=0;
+        fc.stage_round[7]=3;
+        fc.Unit_timer[7]=0;
+    }
+}
+
+function Game_Round_1(cp){ // 플레이어 트리거
+    if (Round_timer[cp] >0 && fc.stage_on[cp]>0) {
+        Round_timer[cp] --;                      }
+    if (Story_timer[cp] >=0 && fc.stage_on[cp]==0) {
+        Story_timer[cp] += 1;                    }
+
+    if (Story_timer[cp] == 50 && fc.stage_on[cp] ==0)
+    {
+        Round_timer[cp]=24*90;
+    }
+    // if (Round_timer[cp]>0 && fc.stage_on[cp] >=0) {
+    //     if(fc.stage_round[cp]%5 !=2)
+    //     {   if(fc.stage_on[7]==1){
+    //         s.insert(0);
+    //         s.appendf("\x13\x19{} \x04라운드 스테이지는 \x11디펜스 스테이지\x04 입니다.\n", fc.stage_round[cp]-2);
+    //         s.appendf("\x13\x19테스트 \x04{} 초\n\n", Round_timer[7]/24);
+    //         s.appendf("\x13\x19남은시간 \x04{} 초\n\n", Round_timer[cp]/24);
+    //         s.DisplayAt(0);
+    //         fc.stage_on[cp]=1;
+    //         }
+    //         if(fc.stage_on[7]==2){
+    //         s.insert(0);
+    //         s.appendf("\x13\x19{} \x04라운드 스테이지는 \x0F전투 스테이지\x04 입니다.\n", fc.stage_round[cp]-2);
+    //         s.appendf("\x13\x19테스트 \x04{} 초\n\n", Round_timer[7]/24);
+    //         s.appendf("\x13\x19남은시간 \x04{} 초\n\n", Round_timer[cp]/24);
+    //         s.DisplayAt(0);
+    //         fc.stage_on[cp]=2;
+    //         }
+    //     }
+    //     if(fc.stage_round[cp]%5 ==2)
+    //     {   if(fc.stage_on[7]==3){
+    //         s.insert(0);
+    //         s.appendf("\x13\x19{} \x04라운드 스테이지는 \x11보스 스테이지\x04 입니다.\n", fc.stage_round[cp]-2);
+    //         s.appendf("\x13\x19테스트 \x04{} 초\n\n", Round_timer[7]/24);
+    //         s.appendf("\x13\x19남은시간 \x04{} 초", Round_timer[cp]/24);
+    //         s.DisplayAt(0);
+    //         fc.stage_on[cp]=3;
+    //         }
+    //     }
+    // }
+    if(Round_timer[cp]==0 && fc.stage_on[cp]>0)
+    {
+        if(fc.stage_round[cp]%5 !=2){
+            if(fc.VictoryCheck(cp,fc.stage_round[cp],fc.stage_on[cp])==true){
+                s.appendf("\x13\x19테스트 \x04{} 초\n\n", Story_timer[cp]);
+                DisplayText("올ㅋ 좀 치는데", AlwaysDisplay=4);}
+            else if (fc.VictoryCheck(cp,fc.stage_round[cp],fc.stage_on[cp])==false) {
+                DisplayText("나가이새끼야", AlwaysDisplay=4);}
+        }
+        else if(fc.stage_round[cp]%5 ==2){
+            if(fc.VictoryCheck(cp,fc.stage_round[cp],fc.stage_on[cp])==true){
+                DisplayText("다음라운드 가즈아", AlwaysDisplay=4);
+                CreateUnit(1, 55, "Stage_2", cp);
+                CreateUnit(1, 55, $L("Stage_2")+10, cp);
+                CreateUnit(1, 55, "Location 45", cp);
+                CreateUnit(1, 55, $L("Location 45")+10, cp);
+                }
+            else if (fc.VictoryCheck(cp,fc.stage_round[cp],fc.stage_on[cp])==false) {
+                DisplayText("너흰아직 준비가 안됐다", AlwaysDisplay=4);}
+        }
+    }
+}
+//////////////////////////////////////////////////////////////////컴퓨터 트리거
+function ComputerStory(cp){
+    if(Story_timer[cp] >= 0){Story_timer[cp] += 1;}
+    if(Round_timer[cp] >  0 && fc.stage_on[cp] >0 ){Round_timer[cp] --;}
+    
+    if(fc.stage_round[cp]<2){
+        if (Story_timer[cp] > i[3] && Story_timer[cp] < i[4]) {
+        fc.ComGame_Round_1(cp,2);
+        fc.stage_on[cp]=1;
+        }
+        if (Story_timer[cp] == i[4]){
+            fc.Unit_many=0;
+            fc.Unit_timer[cp]=0;
+            fc.stage_round[cp] ++;
+            fc.stage_on[cp] =0;
+            }
+        if (Story_timer[cp] > i[6] && Story_timer[cp] < i[7]) {
+            fc.ComGame_Round_1(cp,8);
+            fc.stage_on[cp]=2;
+        }
+        if (Story_timer[cp] == i[7]) {
+            fc.Unit_many=0;
+            fc.stage_on[cp] =0;
+            }
+    }
+    /// 여기까지 튜토리얼
+    if(fc.stage_round[cp]>=3 && fc.stage_round[cp] <=6 ||
+       fc.stage_round[cp]>=8 && fc.stage_round[cp] <=11 ||
+       fc.stage_round[cp]>=13 && fc.stage_round[cp] <=16 ||
+       fc.stage_round[cp]>=18 && fc.stage_round[cp] <=21 ||
+       fc.stage_round[cp]>=23 && fc.stage_round[cp] <=26 ||
+       fc.stage_round[cp]>=28 && fc.stage_round[cp] <=31){
+        if (Story_timer[cp] == 50 && fc.stage_on[cp]==0) {
+            once randomize();
+            var Roundrand = (rand() % 2) + 1;
+            if(Roundrand%2==0){fc.stage_on[cp]=2; // 디펜스 스테이지(테스트)
+            SetInvincibility(Disable, 230, AllPlayers, 64);
+            }
+            if(Roundrand%2==1){fc.stage_on[cp]=2; // 전투 스테이지
+            SetInvincibility(Disable, 230, AllPlayers, 64);
+            }
+            Round_timer[cp]=24*90;} // 라운드시간
+        if (Round_timer[cp] > 0 && fc.stage_on[cp]>0)
+            fc.ComGame_Round_1(cp,36);
+        if (Round_timer[cp]==0 && fc.stage_on[cp]>0)
+            fc.ComCheck(cp);
+    } // 일반스테이지
+    else if(fc.stage_round[cp]==7 ||
+       fc.stage_round[cp]==12 ||
+       fc.stage_round[cp]==17 ||
+       fc.stage_round[cp]==22 ||
+       fc.stage_round[cp]==27 ||
+       fc.stage_round[cp]==32 ){
+        if (Story_timer[cp] == 50 && fc.stage_on[cp]==0) {
+            {fc.stage_on[cp]=3;}
+            Round_timer[cp]=24*90;} // 라운드시간
+        if (Round_timer[cp] > 0 && fc.stage_on[cp]>0)
+            fc.ComGame_Round_1(cp,$L("Location 35"));
+        if (Round_timer[cp]==0 && fc.stage_on[cp]>0)
+            fc.ComCheck(cp);
+    } // 보스스테이지
+}
+/*
+KeyPress(W) : VKeyPress_W, 1
+KeyPress(A) : VKeyPress_A, 1
+KeyPress(S) : VKeyPress_S, 1
+KeyPress(D) : VKeyPress_D, 1
+위에 있는 얘네들을 플러그에 넣어서 설정해줘야하는거고
+const ppvPlayerUnit = PVariable();
+const VKeyPress_W = PVariable();
+const VKeyPress_A = PVariable();
+const VKeyPress_S = PVariable();
+const VKeyPress_D = PVariable();
+
+EUDRegisterObjectToNamespace("VKeyPress_W", VKeyPress_W);
+EUDRegisterObjectToNamespace("VKeyPress_A", VKeyPress_A);
+EUDRegisterObjectToNamespace("VKeyPress_S", VKeyPress_S);
+EUDRegisterObjectToNamespace("VKeyPress_D", VKeyPress_D);
+얘네는 이제 설정하는거
+
+ */

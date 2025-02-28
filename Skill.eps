@@ -1,0 +1,910 @@
+import main as main;
+import draw;
+import Story as st;
+const skill_timer   = PVariable(); // 스킬시전시간
+const skill_on      = PVariable(); // 스킬켜졌을때 숫자에 따라 스킬 다름 ex) Q스킬=1 / W스킬=2 느낌으로
+const job           = PVariable(); // 직업 구분하는 법 0일때 초보자, 1부터 전사
+const skill_Q       = PVariable(); // 스킬쿨타임
+const skill_W       = PVariable();
+const skill_E       = PVariable();
+const skill_R       = PVariable();
+const skill_F       = PVariable();
+const skill_buff_Q  = PVariable(); // 스킬 버프시간
+const skill_buff_W  = PVariable(); // 스킬 버프시간
+const skill_buff_E  = PVariable(); // 스킬 버프시간
+const skill_buff_R  = PVariable(); // 스킬 버프시간
+const skill_buff_F  = PVariable(); // 스킬 버프시간
+//스킬 임팩트 변수
+const stack         = PVariable(); // 크루세이더 스택
+
+function skill_0(cp) { // 스킬0은 0번째캐릭터 (시민) 일 때 스킬리스트
+        const ptr, epd = dwepdread_epd(EPD(0x6284E8) + 12*cp); // 유닛 오프셋 읽어오는 함수
+        if (ptr > 0) {
+            if (MemoryEPD(epd + 0x64 / 4, Exactly, $U(0))){ // 0x64가 유닛오프셋 U0은 시민일때
+                if (MemoryEPD(epd + 0x98 / 4, Exactly, $U(23) * 65536)) // Q스킬뽑았을때 23번부터Q , 24번W, 25번E ..
+                    {if(skill_timer[cp] ==0 && skill_Q[cp] ==0)
+                    {skill_timer[cp]=1; skill_on[cp]=1; skill_Q[cp]= 0*24;/*스킬쿨*/}}
+            }
+            dwwrite_epd(epd + 0x98 / 4, 0 + 228 * 65536);
+            dwwrite_epd(epd + 0x9C / 4, 228 + 228 * 65536);}
+    
+    MoveLocation("Hero", 0, cp, "Anywhere");
+    if (skill_timer[cp] ==1 && skill_on[cp] ==1){ // skill_on 이 1일경우 Q스킬, 2일경우 W스킬
+        CreateUnit(1, "Protoss Scout", "Hero", cp); Order("Protoss Scout", cp, "Anywhere", Attack, "Anywhere");}
+    if (skill_timer[cp] ==6 && skill_on[cp] ==1){
+        KillUnit("Protoss Scout", cp); skill_on[cp]=0; skill_timer[cp]=0;}
+}
+
+function skill_1(cp) { // 광전사_1
+        const ptr, epd = dwepdread_epd(EPD(0x6284E8) + 12*cp);
+        if (ptr > 0) {
+            if (MemoryEPD(epd + 0x64 / 4, Exactly, $U(job[cp]))){
+                // Q스킬 뽑았을 때
+                if (MemoryEPD(epd + 0x98 / 4, Exactly, $U(23) * 65536))
+                    if(skill_timer[cp] ==0 && skill_Q[cp] ==0)
+                    {skill_timer[cp]=1; skill_on[cp]=1; skill_Q[cp]= 24* 0;/*스킬쿨*/}
+                    
+                // W스킬 사용했을 때
+                if (MemoryXEPD(epd + 0x4D/4, Exactly, 146*256, 0xFF00)){  // 명령 146:인스네어
+                    if(skill_timer[cp] ==0 && skill_W[cp] ==0){
+                        skill_timer[cp]=1; skill_on[cp]=2; skill_W[cp]= 24* 5;/*스킬쿨*/}}
+
+                // E스킬뽑았을 때
+                if (MemoryEPD(epd + 0x98 / 4, Exactly, $U(25) * 65536))  // 23번부터Q , 24번W, 25번E, 26번R, 27번F, 28번 D(포션)
+                    {if(skill_timer[cp] ==0 && skill_E[cp] ==0)
+                    {skill_timer[cp]=1; skill_on[cp]=3; skill_E[cp]= 24* 3;/*스킬쿨*/}}
+
+                // R스킬뽑았을 때
+                if (MemoryEPD(epd + 0x98 / 4, Exactly, $U(26) * 65536))  // 23번부터Q , 24번W, 25번E, 26번R, 27번F, 28번 D(포션)
+                    {if(skill_timer[cp] ==0 && skill_R[cp] ==0)
+                    {skill_timer[cp]=1; skill_on[cp]=4; skill_R[cp]= 24* 0;/*스킬쿨*/}}
+
+                // F스킬뽑았을 때
+                if (MemoryEPD(epd + 0x98 / 4, Exactly, $U(27) * 65536)) // 23번부터Q , 24번W, 25번E, 26번R, 27번F, 28번 D(포션)
+                    {if(skill_timer[cp] ==0 && skill_F[cp] ==0)
+                    { skill_buff_F[cp]= 24 * 30; /*버프시간 */ skill_F[cp]= 24* 30; /*스킬쿨*/}}
+
+                //패시브
+                var unitType = dwread_epd(epd + 0x64/4);
+                var Unit_hp_1 = dwread_epd(epd + 0x08/4);
+                var Unit_fullHP_1 = dwread_epd(EPD(0x662350) + unitType);
+                var armor_1 = 1;
+                var percentage_1 = (Unit_hp_1*10 / Unit_fullHP_1*10); // 왜인지 모르지만 이렇게 해야지 인식됨 뒤에 *10 를 곱해줘야함..
+
+                if (percentage_1 >= 100) {
+                    TrgUnit(job[cp]).armor = armor_1;
+                } else if (percentage_1 >= 90) {
+                    TrgUnit(job[cp]).armor = armor_1 +1;
+                } else if (percentage_1 >= 80) {
+                    TrgUnit(job[cp]).armor = armor_1 +2;
+                } else if (percentage_1 >= 70) {
+                    TrgUnit(job[cp]).armor = armor_1 +3;
+                } else if (percentage_1 >= 60) {
+                    TrgUnit(job[cp]).armor = armor_1 +4;
+                } else if (percentage_1 >= 50) {
+                    TrgUnit(job[cp]).armor = armor_1 +5;
+                } else if (percentage_1 >= 40) {
+                    TrgUnit(job[cp]).armor = armor_1 +6;
+                } else if (percentage_1 >= 30) {
+                    TrgUnit(job[cp]).armor = armor_1 +7;
+                } else if (percentage_1 >= 20) {
+                    TrgUnit(job[cp]).armor = armor_1 +8;
+                } else if (percentage_1 >= 10) {
+                    TrgUnit(job[cp]).armor = armor_1 +9;
+                }
+            }
+            dwwrite_epd(epd + 0x98 / 4, 0 + 228 * 65536);
+            dwwrite_epd(epd + 0x9C / 4, 228 + 228 * 65536);
+        }
+            MoveLocation("Hero", job[cp], cp, "Anywhere");
+            MoveLocation("range", job[cp], cp, "Anywhere");
+            //Q스킬_1
+            if(skill_on[cp] ==1)
+            {
+                if(Bring(Force2, AtLeast, 1, "Men", "range"))
+                {
+                    if (skill_timer[cp] ==1){
+                        SetMemoryXEPD(EPD(0x6605F0 + 206 * 1), 7, 1376256, 0xFF0000); // 도어 생성 방향 수정(좌하) 1376256가 방향
+                        wwrite(0x665AC0 + 1696 + 383 * 2, 452); // 도어 이미지 변환
+                        MoveLocation("Skill", "Men", Force2, "range");
+                        addloc("Skill",-20,0);
+                        CreateUnit(1, 206, $L("Skill"), cp); // 도어소환
+                        addloc("Skill",0,-10);
+                        CreateUnit(1, 206, $L("Skill"), cp); // 도어소환
+                        addloc("Skill",0,-10);
+                        CreateUnit(1, 206, $L("Skill"), cp); // 도어소환
+                        
+                    }
+                    if (skill_timer[cp] ==4){
+                        RemoveUnit(206, cp);
+                        wwrite(0x665AC0 + 1696 + 380 * 2, 45); // 스캔 임팩트 수정
+                        CreateUnit(1, 33, $L("Hero"), cp);
+                    }
+                    if (skill_timer[cp] ==7){
+                        RemoveUnit(33, cp);
+                        SetMemoryXEPD(EPD(0x6605F0 + 206 * 1), 7, 720896, 0xFF0000); // 도어 생성 방향 수정(우하) 720896가 방향
+                        MoveLocation("Skill", "Men", Force2, "range");
+                        addloc("Skill",20,0);
+                        CreateUnit(1, 206, $L("Skill"), cp);
+                        addloc("Skill",0,-10);
+                        CreateUnit(1, 206, $L("Skill"), cp); // 도어소환
+                        addloc("Skill",0,-10);
+                        CreateUnit(1, 206, $L("Skill"), cp); // 도어소환
+                    }
+                    if (skill_timer[cp] ==10){
+                        RemoveUnit(206, cp);
+                        wwrite(0x665AC0 + 1696 + 380 * 2, 45); // 스캔 임팩트 수정
+                        CreateUnit(1, 33, $L("Hero"), cp);
+                    }
+                    if (skill_timer[cp] ==11){
+                        RemoveUnit(33, cp); skill_on[cp]=0; skill_timer[cp]=0;
+                    }
+                }
+                else{
+                    if (skill_timer[cp] ==1){
+                        SetMemoryXEPD(EPD(0x6605F0 + 206 * 1), 7, 1376256, 0xFF0000); // 도어 생성 방향 수정(좌하) 1376256가 방향
+                        wwrite(0x665AC0 + 1696 + 383 * 2, 452); // 도어 이미지 
+                        MoveLocation("Skill", job[cp], cp, "Anywhere");
+                        addloc("Skill",-20,0);
+                        CreateUnit(1, 206, $L("Skill"), cp); // 도어소환
+                        addloc("Skill",0,-10);
+                        CreateUnit(1, 206, $L("Skill"), cp); // 도어소환
+                        addloc("Skill",0,-10);
+                        CreateUnit(1, 206, $L("Skill"), cp); // 도어소환
+                    }
+                    if (skill_timer[cp] ==4){
+                        RemoveUnit(206, cp);
+                        wwrite(0x665AC0 + 1696 + 380 * 2, 45); // 스캔 임팩트 수정
+                        CreateUnit(1, 33, $L("Hero"), cp);
+                    }
+                    if (skill_timer[cp] ==7){
+                        RemoveUnit(33, cp);
+                        SetMemoryXEPD(EPD(0x6605F0 + 206 * 1), 7, 720896, 0xFF0000); // 도어 생성 방향 수정(우하) 720896가 방향
+                        MoveLocation("Skill", job[cp], cp, "Anywhere");
+                        addloc("Skill",20,0);
+                        CreateUnit(1, 206, $L("Skill"), cp);
+                        addloc("Skill",0,-10);
+                        CreateUnit(1, 206, $L("Skill"), cp); // 도어소환
+                        addloc("Skill",0,-10);
+                        CreateUnit(1, 206, $L("Skill"), cp); // 도어소환
+                    }
+                    if (skill_timer[cp] ==10){
+                        RemoveUnit(206, cp);
+                        wwrite(0x665AC0 + 1696 + 380 * 2, 45); // 스캔 임팩트 수정
+                        CreateUnit(1, 33, $L("Hero"), cp);
+                    }
+                    if (skill_timer[cp] ==11){
+                        RemoveUnit(33, cp); skill_on[cp]=0; skill_timer[cp]=0;
+                    }
+                }
+            }
+            
+            //W스킬_1
+            if(skill_on[cp] ==2){
+                var x1, y1;
+                var x2, y2;
+                var x, y;
+                var deg;
+                var dx, dy;
+                if (skill_timer[cp] ==1){
+                    x1, y1 = posread_epd(epd + 0x28/4);
+                    x2, y2 = posread_epd(epd + 0x58/4);
+                    x, y = x2 - x1, y2 - y1;
+                    deg = atan2(y, x);
+                    dx, dy = lengthdir(24, deg);
+                    SetMemoryXEPD(epd + 0x4D/4, SetTo, 2*256, 0xFF00);
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                }
+                if (skill_timer[cp] >= 1 && skill_timer[cp] <= 15) {
+                    x1, y1 = posread_epd(epd + 0x28/4); // 유닛위치
+                    x, y = x2 - x1, y2 - y1;
+                    wwrite(0x665AC0 + 1696 + 380 * 2, 59); // 임팩트 수정
+                    addloc("Skill", dx, dy);
+                    CreateUnit(1, 33, $L("Skill"), cp);
+                    RemoveUnit(33, cp);
+                    MoveUnit(All, job[cp], cp, $L("Anywhere"), $L("Skill"));
+                }
+                if (skill_timer[cp] == 16){
+                    skill_timer[cp]=0; skill_on[cp]=0;
+                }
+            }
+
+            //E스킬_1
+            if(skill_on[cp] ==3){
+                var dx, dy;
+                if (skill_timer[cp] >= 1 && skill_timer[cp] <15){ // 난잡하게 찢는 연출을 위해
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    dx, dy = lengthdir(25, 180 + (skill_timer[cp]*25));
+                    addloc("Skill", dx, dy);
+                    CreateUnitWithProperties(1, "Zerg Overlord", "Skill", cp, UnitProperty(invincible=true));
+                    KillUnit("Zerg Overlord",cp);
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    }
+                if (skill_timer[cp] ==24){
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    addloc("Skill", 100, 0);
+                    CreateUnitWithProperties(1, "Zerg Overlord", "Skill", cp, UnitProperty(invincible=true));
+                    KillUnit("Zerg Overlord",cp);
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    addloc("Skill", 50, 80);
+                    CreateUnitWithProperties(1, "Zerg Overlord", "Skill", cp, UnitProperty(invincible=true));
+                    KillUnit("Zerg Overlord",cp);
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    addloc("Skill", -50, 80);
+                    CreateUnitWithProperties(1, "Zerg Overlord", "Skill", cp, UnitProperty(invincible=true));
+                    KillUnit("Zerg Overlord",cp);
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    addloc("Skill", -100, 0);
+                    CreateUnitWithProperties(1, "Zerg Overlord", "Skill", cp, UnitProperty(invincible=true));
+                    KillUnit("Zerg Overlord",cp);
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    addloc("Skill", -50, -80);
+                    CreateUnitWithProperties(1, "Zerg Overlord", "Skill", cp, UnitProperty(invincible=true));
+                    KillUnit("Zerg Overlord",cp);
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    addloc("Skill", 50, -80);
+                    CreateUnitWithProperties(1, "Zerg Overlord", "Skill", cp, UnitProperty(invincible=true));
+                    KillUnit("Zerg Overlord",cp);
+                    }
+                if (skill_timer[cp] >= 25 && skill_timer[cp] <60) {
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    addloc("Skill", 50, 0);
+                    CreateUnitWithProperties(1, "Kakaru (Twilight)", "Skill", cp, UnitProperty(invincible=true));
+                    KillUnit("Kakaru (Twilight)", cp);
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    addloc("Skill", 25, 40);
+                    CreateUnitWithProperties(1, "Kakaru (Twilight)", "Skill", cp, UnitProperty(invincible=true));
+                    KillUnit("Kakaru (Twilight)", cp);
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    addloc("Skill", -25, 40);
+                    CreateUnitWithProperties(1, "Kakaru (Twilight)", "Skill", cp, UnitProperty(invincible=true));
+                    KillUnit("Kakaru (Twilight)", cp);
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    addloc("Skill", -50, 0);
+                    CreateUnitWithProperties(1, "Kakaru (Twilight)", "Skill", cp, UnitProperty(invincible=true));
+                    KillUnit("Kakaru (Twilight)", cp);
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    addloc("Skill", -25, -40);
+                    CreateUnitWithProperties(1, "Kakaru (Twilight)", "Skill", cp, UnitProperty(invincible=true));
+                    KillUnit("Kakaru (Twilight)", cp);
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    addloc("Skill", 25, -40);
+                    CreateUnitWithProperties(1, "Kakaru (Twilight)", "Skill", cp, UnitProperty(invincible=true));
+                    KillUnit("Kakaru (Twilight)", cp);
+                    }
+                if (skill_timer[cp] == 61){
+                    skill_timer[cp]=0; skill_on[cp]=0;
+                    }
+            }
+
+            //R스킬_1
+            if(skill_on[cp] ==4){
+                var dx, dy;
+                if (skill_timer[cp] >=1 && skill_timer[cp] <73){
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    dx, dy = lengthdir(100, 0+ skill_timer[cp]*5);
+                    addloc("Skill", dx, dy);
+                    CreateUnitWithProperties(1, "Zerg Overlord", "Skill", cp, UnitProperty(invincible=true));
+                    KillUnit("Zerg Overlord",cp);
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    dx, dy = lengthdir(100, 72+ skill_timer[cp]*5);
+                    addloc("Skill", dx, dy);
+                    CreateUnitWithProperties(1, "Zerg Overlord", "Skill", cp, UnitProperty(invincible=true));
+                    KillUnit("Zerg Overlord",cp);
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    dx, dy = lengthdir(100, 144+ skill_timer[cp]*5);
+                    addloc("Skill", dx, dy);
+                    CreateUnitWithProperties(1, "Zerg Overlord", "Skill", cp, UnitProperty(invincible=true));
+                    KillUnit("Zerg Overlord",cp);
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    dx, dy = lengthdir(100, 216+ skill_timer[cp]*5);
+                    addloc("Skill", dx, dy);
+                    CreateUnitWithProperties(1, "Zerg Overlord", "Skill", cp, UnitProperty(invincible=true));
+                    KillUnit("Zerg Overlord",cp);
+                    dx, dy = lengthdir(100, 288+ skill_timer[cp]*5);
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    addloc("Skill", dx, dy);
+                    CreateUnitWithProperties(1, "Zerg Overlord", "Skill", cp, UnitProperty(invincible=true));
+                    KillUnit("Zerg Overlord",cp);
+                }
+                if (skill_timer[cp] ==74){
+                    skill_timer[cp]=0; skill_on[cp]=0;
+                }
+            }
+
+            //F스킬_1
+            if (skill_buff_F[cp] >=2){
+                ModifyUnitHitPoints(All, 1, cp, "Anywhere", 10);
+                skill_buff_F[cp]--;
+                }
+            if(skill_buff_F[cp] >=2 && skill_buff_F[cp] % 60 == 0){
+                CreateUnitWithProperties(1, "Zerg Overlord", "Hero", cp, UnitProperty(invincible=true));
+                KillUnit("Zerg Overlord",cp);
+                }
+            if (skill_buff_F[cp] ==1){
+            skill_buff_F[cp]=0;
+            }
+}
+
+function skill_2(cp) { // 크루세이더_2
+    const ptr, epd = dwepdread_epd(EPD(0x6284E8) + 12*cp);
+        if (ptr > 0) {
+            if (MemoryEPD(epd + 0x64 / 4, Exactly, $U(job[cp]))){
+                // Q스킬 뽑았을 때
+                if (MemoryEPD(epd + 0x98 / 4, Exactly, $U(23) * 65536))
+                    if(skill_timer[cp] ==0 && skill_Q[cp] ==0){
+                        skill_timer[cp]=1; skill_on[cp]=1; skill_Q[cp]= 24* 3;/*스킬쿨*/
+                    }
+                // W스킬 뽑았을 때
+                if (MemoryEPD(epd + 0x98 / 4, Exactly, $U(24) * 65536))
+                    if(skill_timer[cp] ==0 && skill_W[cp] ==0){
+                        skill_timer[cp]=1; skill_on[cp]=2; skill_W[cp]= 24* 0;/*스킬쿨*/
+                    }
+                // E스킬 사용했을 때
+                if (MemoryXEPD(epd + 0x4D/4, Exactly, 146*256, 0xFF00)){  // 명령 146:인스네어
+                    if(skill_timer[cp] ==0 && skill_E[cp] ==0){
+                        skill_timer[cp]=1; skill_on[cp]=3; skill_E[cp]= 24* 5;/*스킬쿨*/}}
+                // R스킬 뽑았을 때
+                if (MemoryEPD(epd + 0x98 / 4, Exactly, $U(26) * 65536))  // 23번부터Q , 24번W, 25번E, 26번R, 27번F, 28번 D(포션)
+                    {if(skill_timer[cp] ==0 && skill_R[cp] ==0)
+                    {skill_timer[cp]=1; skill_on[cp]=4; skill_R[cp]= 24* 3;/*스킬쿨*/}}
+
+                // F스킬 뽑았을 때
+                if (MemoryEPD(epd + 0x98 / 4, Exactly, $U(27) * 65536)) // 23번부터Q , 24번W, 25번E, 26번R, 27번F, 28번 D(포션)
+                    {if(skill_timer[cp] ==0 && skill_F[cp] ==0)
+                    { skill_buff_F[cp]= 24 * 30; /*버프시간 */ skill_F[cp]= 24* 30; /*스킬쿨*/}}
+            }
+            dwwrite_epd(epd + 0x98 / 4, 0 + 228 * 65536);
+            dwwrite_epd(epd + 0x9C / 4, 228 + 228 * 65536);
+        }
+            MoveLocation("Hero", job[cp], cp, "Anywhere");
+
+            //Q스킬_2
+            if(skill_on[cp] ==1){
+                var x = bread_epd(epd + 0x21/4, 1); // 유닛이 바라보는 방향
+                var y = x * 360 / 256; // 스타에서 입력 받은걸 360도 기준으로 치환
+                var angle = y;
+                var dx, dy;
+                if (skill_timer[cp] ==1){
+                    CreateUnit(1, 205, $L("Hero"), cp);
+                    wwrite(0x665AC0 + 1696 + 383 * 2, 983); // 임팩트 수정(도어2)
+                    wwrite(0x665AC0 + 1696 + 380 * 2, 214); // 임팩트 수정(스캔)
+                }
+                if (skill_timer[cp] >= 1 && skill_timer[cp] <8){
+                    MoveLocation("Skill", 205, cp, "Anywhere");
+                    dx, dy = lengthdir(100, angle+180 + (skill_timer[cp]*25)); // 90을 더할수록 오른쪽으로 돈다
+                    addloc("Skill", dx, dy);
+                    CreateUnit(1, 33, "Skill", cp); 
+                    RemoveUnit(33, cp);
+                }
+                if (skill_timer[cp] == 8){
+                    RemoveUnit(205, cp);
+                        if(stack[cp]<5)
+                            {stack[cp] += 1;}
+                        else{}
+                    skill_timer[cp] =0; skill_on[cp]=0;
+                }
+            }
+        
+
+            //W스킬_2
+            if(skill_on[cp] ==2){
+                var x = bread_epd(epd + 0x21/4, 1); // 유닛이 바라보는 방향
+                var y = x * 360 / 256; // 스타에서 입력 받은걸 360도 기준으로 치환
+                var angle = y;
+                var dx, dy;
+                var unitType = dwread_epd(epd + 0x64/4);
+                var Unit_fullShield = dwread_epd(EPD(0x660E00) + unitType);
+                if (skill_timer[cp] ==1){
+                    TrgUnit(job[cp]).maxShield = Unit_fullShield + 1557;
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                }
+                if (skill_timer[cp] >= 1 && skill_timer[cp] <= 15) {
+                    ModifyUnitShields(All,job[cp],cp,"Anywhere",100);
+                }
+                if (skill_timer[cp] >= 16 && skill_timer[cp] <=25){
+                    wwrite(0x665AC0 + 1696 + 380 * 2, 215); // 임팩트 수정(스캔)
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    dx, dy = lengthdir(30*(skill_timer[cp]-15), angle+270); // 90을 더할수록 오른쪽으로 돈다
+                    addloc("Skill", dx, dy);
+                    CreateUnit(1, 33, "Skill", cp); 
+                    RemoveUnit(33, cp);
+                }
+                if (skill_timer[cp] == 26){
+                    TrgUnit(job[cp]).maxShield = Unit_fullShield;
+                    skill_timer[cp]=0; skill_on[cp]=0;
+                    if(stack[cp]<4)
+                            {stack[cp] += 2;}
+                        else{stack[cp]=5;}
+                }
+            }
+
+            //E스킬_2
+            if(skill_on[cp] ==3){
+                var x1, y1;
+                var x2, y2;
+                var x, y;
+                var deg;
+                var dx, dy;
+                if (skill_timer[cp] ==1){
+                    x1, y1 = posread_epd(epd + 0x28/4); // 현재위치
+                    x2, y2 = posread_epd(epd + 0x58/4); // 명령위치
+                    x, y = x2 - x1, y2 - y1;
+                    deg = atan2(y, x);
+                    dx, dy = lengthdir(24, deg);
+                    SetMemoryXEPD(epd + 0x4D/4, SetTo, 2*256, 0xFF00);
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");}
+                if (skill_timer[cp] >= 1 && skill_timer[cp] <= 15) {
+                    wwrite(0x665AC0 + 1696 + 380 * 2, 557); // 임팩트 수정
+                        if(Bring(Force2, AtLeast, 1, "Men", "Skill")){
+                        skill_timer[cp] = 16;
+                        }
+                        else{
+                        addloc("Skill", dx, dy);
+                        CreateUnit(1, 33, $L("Skill"), cp);
+                        RemoveUnit(33, cp);
+                        }
+                    }
+                if (skill_timer[cp] == 16){
+                    CreateUnitWithProperties(1, "Protoss Scout", "Skill", cp, UnitProperty(invincible=true));
+                    Order("Protoss Scout", cp, "Anywhere", Attack, "Anywhere");
+                }
+                if (skill_timer[cp] == 23){
+                    KillUnit("Protoss Scout", cp);
+                }
+                if (skill_timer[cp] == 24){
+                    CreateUnitWithProperties(1, "Protoss Scout", "Skill", cp, UnitProperty(invincible=true));
+                    Order("Protoss Scout", cp, "Anywhere", Attack, "Anywhere");
+                }
+                if (skill_timer[cp] == 31){
+                    KillUnit("Protoss Scout", cp);
+                }
+                if (skill_timer[cp] == 32){
+                    skill_timer[cp]=0; skill_on[cp]=0;
+                    if(stack[cp]<5)
+                            {stack[cp] += 1;}
+                        else{stack[cp]=5;}
+                }
+            }
+            //R스킬_2
+            if(skill_on[cp] ==4){
+                var dx, dy;
+                if (skill_timer[cp] ==1){
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    dx, dy = lengthdir(100, 0+ skill_timer[cp]*5);
+                    addloc("Skill", dx, dy);
+                    CreateUnitWithProperties(1, "Zerg Overlord", "Skill", cp, UnitProperty(invincible=true));
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    dx, dy = lengthdir(100, 72+ skill_timer[cp]*5);
+                    addloc("Skill", dx, dy);
+                    CreateUnitWithProperties(1, "Zerg Mutalisk", "Skill", cp, UnitProperty(invincible=true));
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    dx, dy = lengthdir(100, 144+ skill_timer[cp]*5);
+                    addloc("Skill", dx, dy);
+                    CreateUnitWithProperties(1, 29, "Skill", cp, UnitProperty(invincible=true));
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    dx, dy = lengthdir(100, 216+ skill_timer[cp]*5);
+                    addloc("Skill", dx, dy);
+                    CreateUnitWithProperties(1, "Protoss Scout", "Skill", cp, UnitProperty(invincible=true));
+                    dx, dy = lengthdir(100, 288+ skill_timer[cp]*5);
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    addloc("Skill", dx, dy);
+                    CreateUnitWithProperties(1, 44, "Skill", cp, UnitProperty(invincible=true));
+                // MoveLocation("Skill", job[cp], cp, "Anywhere");
+                // CreateUnit(1, 206, $L("Skill"), cp); // 도어소환
+                // wwrite(0x665AC0 + 1696 + 383 * 2, 452); // 도어 이미지 변환
+                }
+                if (skill_timer[cp] >=2 && skill_timer[cp] <73){
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    dx, dy = lengthdir(100, 0+ skill_timer[cp]*5);
+                    addloc("Skill", dx, dy);
+                    MoveUnit(All, "Zerg Overlord", cp, "Anywhere", "Skill");
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    dx, dy = lengthdir(100, 72+ skill_timer[cp]*5);
+                    addloc("Skill", dx, dy);
+                    MoveUnit(All, "Zerg Mutalisk", cp, "Anywhere", "Skill");
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    dx, dy = lengthdir(100, 144+ skill_timer[cp]*5);
+                    addloc("Skill", dx, dy);
+                    MoveUnit(All, 29, cp, "Anywhere", "Skill");
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    dx, dy = lengthdir(100, 216+ skill_timer[cp]*5);
+                    addloc("Skill", dx, dy);
+                    MoveUnit(All, "Protoss Scout", cp, "Anywhere", "Skill");
+                    dx, dy = lengthdir(100, 288+ skill_timer[cp]*5);
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    addloc("Skill", dx, dy);
+                    MoveUnit(All, 44, cp, "Anywhere", "Skill");
+                }
+                if (skill_timer[cp] ==74){
+                    KillUnit("Zerg Overlord",cp);
+                    KillUnit("Zerg Mutalisk",cp);
+                    KillUnit(29,cp);
+                    KillUnit("Protoss Scout",cp);
+                    KillUnit(44,cp);
+                    skill_timer[cp]=0; skill_on[cp]=0;
+                }
+            }
+            
+            //F스킬_2
+            if (skill_buff_F[cp] >=2){
+                ModifyUnitHitPoints(All, 1, cp, "Anywhere", 10);
+                skill_buff_F[cp]--;
+            }
+            if(skill_buff_F[cp] >=2 && skill_buff_F[cp] % 60 == 0)
+            {
+                CreateUnitWithProperties(1, "Zerg Overlord", "Hero", cp, UnitProperty(invincible=true));
+                KillUnit("Zerg Overlord",cp);
+            }
+            if (skill_buff_F[cp] ==1){
+                skill_buff_F[cp]=0;
+            }
+}
+function skill_3(cp) { // 대장장이_3
+    const ptr, epd = dwepdread_epd(EPD(0x6284E8) + 12*cp);
+        if (ptr > 0) {
+            if (MemoryEPD(epd + 0x64 / 4, Exactly, $U(job[cp]))){
+                // Q스킬 뽑았을 때
+                if (MemoryEPD(epd + 0x98 / 4, Exactly, $U(23) * 65536))
+                    if(skill_timer[cp] ==0 && skill_Q[cp] ==0){
+                        skill_timer[cp]=1; skill_on[cp]=1; skill_Q[cp]= 24* 3;/*스킬쿨*/
+                    }
+                // W스킬 뽑았을 때
+                if (MemoryEPD(epd + 0x98 / 4, Exactly, $U(24) * 65536))
+                    if(skill_timer[cp] ==0 && skill_W[cp] ==0){
+                        skill_timer[cp]=1; skill_on[cp]=2; skill_W[cp]= 24* 0;/*스킬쿨*/
+                    }
+                // E스킬 사용했을 때
+                if (MemoryXEPD(epd + 0x4D/4, Exactly, 146*256, 0xFF00)){  // 명령 146:인스네어
+                    if(skill_timer[cp] ==0 && skill_E[cp] ==0){
+                        skill_timer[cp]=1; skill_on[cp]=3; skill_E[cp]= 24* 5;/*스킬쿨*/}}
+                // R스킬 뽑았을 때
+                if (MemoryEPD(epd + 0x98 / 4, Exactly, $U(26) * 65536))  // 23번부터Q , 24번W, 25번E, 26번R, 27번F, 28번 D(포션)
+                    {if(skill_timer[cp] ==0 && skill_R[cp] ==0)
+                    {skill_timer[cp]=1; skill_on[cp]=4; skill_R[cp]= 24* 30;/*스킬쿨*/
+                     skill_buff_R[cp]= 24 * 30; /*버프시간 */ }}
+
+                // F스킬 뽑았을 때
+                if (MemoryEPD(epd + 0x98 / 4, Exactly, $U(27) * 65536)) // 23번부터Q , 24번W, 25번E, 26번R, 27번F, 28번 D(포션)
+                    {if(skill_timer[cp] ==0 && skill_F[cp] ==0)
+                    { skill_buff_F[cp]= 24 * 30; /*버프시간 */ skill_F[cp]= 24* 30; /*스킬쿨*/}}
+            }
+            dwwrite_epd(epd + 0x98 / 4, 0 + 228 * 65536);
+            dwwrite_epd(epd + 0x9C / 4, 228 + 228 * 65536);
+        }
+            MoveLocation("Hero", job[cp], cp, "Anywhere");
+
+            //Q스킬_3
+            if(skill_on[cp] ==1)
+            {
+                if (skill_timer[cp] ==1){
+                    wwrite(0x665AC0 + 1696 + 383 * 2, 533); // 도어 수정 스프라이트:383번, 바꿀거 533떙크
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    addloc("Skill", 100, 0);
+                    CreateUnitWithProperties(1, 207, "Skill", cp, UnitProperty(invincible=true));
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    addloc("Skill", 50, 80);
+                    CreateUnitWithProperties(1, 207, "Skill", cp, UnitProperty(invincible=true));
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    addloc("Skill", -50, 80);
+                    CreateUnitWithProperties(1, 207, "Skill", cp, UnitProperty(invincible=true));
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    addloc("Skill", -100, 0);
+                    CreateUnitWithProperties(1, 207, "Skill", cp, UnitProperty(invincible=true));
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    addloc("Skill", -50, -80);
+                    CreateUnitWithProperties(1, 207, "Skill", cp, UnitProperty(invincible=true));
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    addloc("Skill", 50, -80);
+                    CreateUnitWithProperties(1, 207, "Skill", cp, UnitProperty(invincible=true));
+                }
+                if (skill_timer[cp] ==11){
+                    RemoveUnit(207, cp); skill_on[cp]=0; skill_timer[cp]=0;
+                }
+            }
+        
+
+            //W스킬_3
+            if(skill_on[cp] ==2){
+                if (skill_timer[cp] ==1){
+                    wwrite(0x665AC0 + 1696 + 380 * 2, 391); // 임팩트 수정
+                     // wwrite(0x665AC0 + 1696 + 383 * 2, 391); // 도어 수정 스프라이트:383번
+                    CreateUnitWithProperties(1, "Zerg Overlord", "Hero", cp,UnitProperty(invincible=true));
+                    KillUnit("Zerg Overlord",cp);
+                }
+                if (skill_timer[cp] >= 1 && skill_timer[cp] <= 15) {
+                    CreateUnitWithProperties(1, 33, "Hero", cp, UnitProperty(invincible=true));
+                    RemoveUnit(33, cp);
+                    Order("Men", Force2, "Stage_1", Move, "Hero");
+                }
+                if (skill_timer[cp] == 16){
+                    RemoveUnit(33, cp);
+                    skill_on[cp]=0; skill_timer[cp]=0;
+                }
+            }
+
+            //E스킬_3
+            if(skill_on[cp] ==3){
+                var globalX, globalY;
+                if (skill_timer[cp] ==1){
+                    globalX, globalY = posread_epd(epd + 0x58/4);
+                    SetMemoryXEPD(epd + 0x4D/4, SetTo, 2*256, 0xFF00);
+                    setloc("Skill",globalX,globalY);
+                    addloc("Skill", 0, -400);
+                }
+                if (skill_timer[cp] >=2 && skill_timer[cp] < 12){
+                    addloc("Skill", 0, 40);
+                    MoveUnit(All, job[cp], cp, "Anywhere", "Skill");
+                }
+                if (skill_timer[cp] == 12){
+                    skill_timer[cp]=0; skill_on[cp]=0;
+                }
+            }
+            //R스킬_3
+            if(skill_on[cp] ==4){
+                if (skill_timer[cp] == 12){
+                    skill_timer[cp]=0; skill_on[cp]=0;
+                }
+            }
+            if (skill_timer[cp] ==1){
+                skill_timer[cp]=0; skill_on[cp]=0;
+            }
+            if (skill_buff_R[cp] >=2){
+                // 버프효과
+                var Unit_hp_3 = dwread_epd(epd + 0x08/4);
+                var Unit_fullHP_3 = dwread_epd(EPD(0x662350) + job[cp]);
+                skill_buff_R[cp]--;
+                if(Unit_hp_3 < Unit_fullHP_3)
+                {
+                    dwwrite_epd(epd + 0x08 / 4, Unit_hp_3 + 256* 1 );
+                }
+            }
+            if (skill_buff_F[cp] ==1){
+                skill_buff_F[cp]=0;
+            }
+            
+}
+function skill_4(cp) { // 크루세이더_4
+    const ptr, epd = dwepdread_epd(EPD(0x6284E8) + 12*cp);
+        if (ptr > 0) {
+            if (MemoryEPD(epd + 0x64 / 4, Exactly, $U(job[cp]))){
+                // Q스킬 뽑았을 때
+                if (MemoryEPD(epd + 0x98 / 4, Exactly, $U(23) * 65536))
+                    if(skill_timer[cp] ==0 && skill_Q[cp] ==0){
+                        skill_timer[cp]=1; skill_on[cp]=1; skill_Q[cp]= 24* 3;/*스킬쿨*/
+                    }
+                // W스킬 뽑았을 때
+                if (MemoryEPD(epd + 0x98 / 4, Exactly, $U(24) * 65536))
+                    if(skill_timer[cp] ==0 && skill_W[cp] ==0){
+                        skill_timer[cp]=1; skill_on[cp]=2; skill_W[cp]= 24* 0;/*스킬쿨*/
+                    }
+                // E스킬 사용했을 때
+                if (MemoryXEPD(epd + 0x4D/4, Exactly, 146*256, 0xFF00)){  // 명령 146:인스네어
+                    if(skill_timer[cp] ==0 && skill_E[cp] ==0){
+                        skill_timer[cp]=1; skill_on[cp]=3; skill_E[cp]= 24* 5;/*스킬쿨*/}}
+                // R스킬 뽑았을 때
+                if (MemoryEPD(epd + 0x98 / 4, Exactly, $U(26) * 65536))  // 23번부터Q , 24번W, 25번E, 26번R, 27번F, 28번 D(포션)
+                    {if(skill_timer[cp] ==0 && skill_R[cp] ==0)
+                    {skill_timer[cp]=1; skill_on[cp]=4; skill_R[cp]= 24* 3;/*스킬쿨*/}}
+
+                // F스킬 뽑았을 때
+                if (MemoryEPD(epd + 0x98 / 4, Exactly, $U(27) * 65536)) // 23번부터Q , 24번W, 25번E, 26번R, 27번F, 28번 D(포션)
+                    {if(skill_timer[cp] ==0 && skill_F[cp] ==0)
+                    { skill_buff_F[cp]= 24 * 30; /*버프시간 */ skill_F[cp]= 24* 30; /*스킬쿨*/}}
+            }
+            dwwrite_epd(epd + 0x98 / 4, 0 + 228 * 65536);
+            dwwrite_epd(epd + 0x9C / 4, 228 + 228 * 65536);
+        }
+            MoveLocation("Hero", job[cp], cp, "Anywhere");
+
+            //Q스킬_4
+            if(skill_on[cp] ==1){
+                var x = bread_epd(epd + 0x21/4, 1); // 유닛이 바라보는 방향
+                var y = x * 360 / 256; // 스타에서 입력 받은걸 360도 기준으로 치환
+                var angle = y;
+                var dx, dy;
+                if (skill_timer[cp] ==1){
+                    CreateUnit(1, 205, $L("Hero"), cp);
+                    wwrite(0x665AC0 + 1696 + 383 * 2, 983); // 임팩트 수정(도어2)
+                    wwrite(0x665AC0 + 1696 + 380 * 2, 214); // 임팩트 수정(스캔)
+                }
+                if (skill_timer[cp] >= 1 && skill_timer[cp] <8){
+                    MoveLocation("Skill", 205, cp, "Anywhere");
+                    dx, dy = lengthdir(100, angle+180 + (skill_timer[cp]*25)); // 90을 더할수록 오른쪽으로 돈다
+                    addloc("Skill", dx, dy);
+                    CreateUnit(1, 33, "Skill", cp); 
+                    RemoveUnit(33, cp);
+                }
+                if (skill_timer[cp] == 8){
+                    RemoveUnit(205, cp);
+                        if(stack[cp]<5)
+                            {stack[cp] += 1;}
+                        else{}
+                    skill_timer[cp] =0; skill_on[cp]=0;
+                }
+            }
+        
+            //W스킬_4
+            if(skill_on[cp] ==2){
+                var x = bread_epd(epd + 0x21/4, 1); // 유닛이 바라보는 방향
+                var y = x * 360 / 256; // 스타에서 입력 받은걸 360도 기준으로 치환
+                var angle = y;
+                var dx, dy;
+                var unitType = dwread_epd(epd + 0x64/4);
+                var Unit_fullShield = dwread_epd(EPD(0x660E00) + unitType);
+                if (skill_timer[cp] ==1){
+                    TrgUnit(job[cp]).maxShield = Unit_fullShield + 1557;
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                }
+                if (skill_timer[cp] >= 1 && skill_timer[cp] <= 15) {
+                    ModifyUnitShields(All,job[cp],cp,"Anywhere",100);
+                }
+                if (skill_timer[cp] >= 16 && skill_timer[cp] <=25){
+                    wwrite(0x665AC0 + 1696 + 380 * 2, 215); // 임팩트 수정(스캔)
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    dx, dy = lengthdir(30*(skill_timer[cp]-15), angle+270); // 90을 더할수록 오른쪽으로 돈다
+                    addloc("Skill", dx, dy);
+                    CreateUnit(1, 33, "Skill", cp); 
+                    RemoveUnit(33, cp);
+                }
+                if (skill_timer[cp] == 26){
+                    TrgUnit(job[cp]).maxShield = Unit_fullShield;
+                    skill_timer[cp]=0; skill_on[cp]=0;
+                    if(stack[cp]<4)
+                            {stack[cp] += 2;}
+                        else{stack[cp]=5;}
+                }
+            }
+
+            //E스킬_4
+            if(skill_on[cp] ==3){
+                var x1, y1;
+                var x2, y2;
+                var x, y;
+                var deg;
+                var dx, dy;
+                if (skill_timer[cp] ==1){
+                    x1, y1 = posread_epd(epd + 0x28/4); // 현재위치
+                    x2, y2 = posread_epd(epd + 0x58/4); // 명령위치
+                    x, y = x2 - x1, y2 - y1;
+                    deg = atan2(y, x);
+                    dx, dy = lengthdir(24, deg);
+                    SetMemoryXEPD(epd + 0x4D/4, SetTo, 2*256, 0xFF00);
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");}
+                if (skill_timer[cp] >= 1 && skill_timer[cp] <= 15) {
+                    wwrite(0x665AC0 + 1696 + 380 * 2, 557); // 임팩트 수정
+                        if(Bring(Force2, AtLeast, 1, "Men", "Skill")){
+                        skill_timer[cp] = 16;
+                        }
+                        else{
+                        addloc("Skill", dx, dy);
+                        CreateUnit(1, 33, $L("Skill"), cp);
+                        RemoveUnit(33, cp);
+                        }
+                    }
+                if (skill_timer[cp] == 16){
+                    CreateUnitWithProperties(1, "Protoss Scout", "Skill", cp, UnitProperty(invincible=true));
+                    Order("Protoss Scout", cp, "Anywhere", Attack, "Anywhere");
+                }
+                if (skill_timer[cp] == 23){
+                    KillUnit("Protoss Scout", cp);
+                }
+                if (skill_timer[cp] == 24){
+                    CreateUnitWithProperties(1, "Protoss Scout", "Skill", cp, UnitProperty(invincible=true));
+                    Order("Protoss Scout", cp, "Anywhere", Attack, "Anywhere");
+                }
+                if (skill_timer[cp] == 31){
+                    KillUnit("Protoss Scout", cp);
+                }
+                if (skill_timer[cp] == 32){
+                    skill_timer[cp]=0; skill_on[cp]=0;
+                    if(stack[cp]<5)
+                            {stack[cp] += 1;}
+                        else{stack[cp]=5;}
+                }
+            }
+            //R스킬_4
+            if(skill_on[cp] ==4){
+                var dx, dy;
+                if (skill_timer[cp] ==1){
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    dx, dy = lengthdir(100, 0+ skill_timer[cp]*5);
+                    addloc("Skill", dx, dy);
+                    CreateUnitWithProperties(1, "Zerg Overlord", "Skill", cp, UnitProperty(invincible=true));
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    dx, dy = lengthdir(100, 72+ skill_timer[cp]*5);
+                    addloc("Skill", dx, dy);
+                    CreateUnitWithProperties(1, "Zerg Mutalisk", "Skill", cp, UnitProperty(invincible=true));
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    dx, dy = lengthdir(100, 144+ skill_timer[cp]*5);
+                    addloc("Skill", dx, dy);
+                    CreateUnitWithProperties(1, 29, "Skill", cp, UnitProperty(invincible=true));
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    dx, dy = lengthdir(100, 216+ skill_timer[cp]*5);
+                    addloc("Skill", dx, dy);
+                    CreateUnitWithProperties(1, "Protoss Scout", "Skill", cp, UnitProperty(invincible=true));
+                    dx, dy = lengthdir(100, 288+ skill_timer[cp]*5);
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    addloc("Skill", dx, dy);
+                    CreateUnitWithProperties(1, 44, "Skill", cp, UnitProperty(invincible=true));
+                // MoveLocation("Skill", job[cp], cp, "Anywhere");
+                // CreateUnit(1, 206, $L("Skill"), cp); // 도어소환
+                // wwrite(0x665AC0 + 1696 + 383 * 2, 452); // 도어 이미지 변환
+                }
+                if (skill_timer[cp] >=2 && skill_timer[cp] <73){
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    dx, dy = lengthdir(100, 0+ skill_timer[cp]*5);
+                    addloc("Skill", dx, dy);
+                    MoveUnit(All, "Zerg Overlord", cp, "Anywhere", "Skill");
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    dx, dy = lengthdir(100, 72+ skill_timer[cp]*5);
+                    addloc("Skill", dx, dy);
+                    MoveUnit(All, "Zerg Mutalisk", cp, "Anywhere", "Skill");
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    dx, dy = lengthdir(100, 144+ skill_timer[cp]*5);
+                    addloc("Skill", dx, dy);
+                    MoveUnit(All, 29, cp, "Anywhere", "Skill");
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    dx, dy = lengthdir(100, 216+ skill_timer[cp]*5);
+                    addloc("Skill", dx, dy);
+                    MoveUnit(All, "Protoss Scout", cp, "Anywhere", "Skill");
+                    dx, dy = lengthdir(100, 288+ skill_timer[cp]*5);
+                    MoveLocation("Skill", job[cp], cp, "Anywhere");
+                    addloc("Skill", dx, dy);
+                    MoveUnit(All, 44, cp, "Anywhere", "Skill");
+                }
+                if (skill_timer[cp] ==74){
+                    KillUnit("Zerg Overlord",cp);
+                    KillUnit("Zerg Mutalisk",cp);
+                    KillUnit(29,cp);
+                    KillUnit("Protoss Scout",cp);
+                    KillUnit(44,cp);
+                    skill_timer[cp]=0; skill_on[cp]=0;
+                }
+            }
+            //F스킬_4
+            if (skill_buff_F[cp] >=2){
+                ModifyUnitHitPoints(All, 1, cp, "Anywhere", 10);
+                skill_buff_F[cp]--;
+            }
+            if(skill_buff_F[cp] >=2 && skill_buff_F[cp] % 60 == 0)
+            {
+                CreateUnitWithProperties(1, "Zerg Overlord", "Hero", cp, UnitProperty(invincible=true));
+                KillUnit("Zerg Overlord",cp);
+            }
+            if (skill_buff_F[cp] ==1){
+                skill_buff_F[cp]=0;
+            }
+}
+
+function skill_loop(cp){
+    if(skill_Q[cp]>0){skill_Q[cp]--;}
+    if(skill_W[cp]>0){skill_W[cp]--;}
+    if(skill_E[cp]>0){skill_E[cp]--;}
+    if(skill_R[cp]>0){skill_R[cp]--;}
+    if(skill_F[cp]>0){skill_F[cp]--;}
+    
+    switch (job[cp]) {
+    case 0: // 직업번호가 0일 경우 (0은 초보자)
+        skill_0(cp);
+        break;
+    case 1:
+        skill_1(cp);
+        break;
+    case 2:
+        skill_2(cp);
+        break;
+    case 3:
+        skill_3(cp);
+        break;
+    case 4:
+        skill_4(cp);
+        break;
+    default:
+        break;
+    }
+}
+// ModifyUnitHitPoints(All, 1, cp, "Anywhere", 100);
+                    // CreateUnit(1, "Protoss Scout", "mouse", cp); Order("Protoss Scout", cp, "Anywhere", Attack, "Anywhere");
+                    // wwrite(0x665AC0 + 1696 + 380 * 2, 59); // 임팩트 수정
+                    // RemoveUnit(33, cp);
