@@ -1,0 +1,73 @@
+import math;
+
+const EFFECT_UNIT = 208;
+const EFFECT_SPRITE = 384;
+const IMAGE = 452;		//불 이미지
+
+var UnitEPD = 0;
+
+
+function onPluginStart(){
+	foreach(ptr, epd : EUDLoopUnit2()){
+		if(MemoryXEPD(epd+0x64/4, Exactly, 0, 0xFFFF)){
+			UnitEPD = epd;
+			break;
+		}
+	}
+}
+
+
+
+function beforeTriggerExec(){
+	const player = 0;
+	const epd = UnitEPD;
+	static var yori_seta1 = 0;
+	yori_seta1 = (yori_seta1+5) % 360;
+	wwrite_epd(EPD(0x666160) + EFFECT_SPRITE/2, 2*(EFFECT_SPRITE%2), IMAGE);	//스프라이트의 이미지ID 변경
+	const yoriX, yoriY = posread_epd(epd + 0x28/4);
+	const locID = 1;  // 로케이션
+	setloc(locID, 0, 0, yoriX+yoriX, yoriY+yoriY);  // 중심이 (yoriX, yoriY) 인 로케이션
+	var door = epdcunitread_epd(EPD(0x628438));  // 유닛 EPD
+	setcurpl(player);  // CurrentPlayer 설정
+	EUDSwitch(yori_seta1);
+	foreach(seta : py_range(0, 360, 10)) {
+		EUDSwitchCase()(seta);
+		const dots = py_list();
+		foreach(k : py_range(10)) {
+			const x = py_eval('int(1*pow(math.exp(1),(math.log((1/math.tan((90*(8-2)/8)*(2*math.pi/360)))*(180*(k+16)/20)/(1*math.sqrt(1+pow((1/math.tan((90*(8-2)/8)*(2*math.pi/360))),2))))))*math.cos((math.log((1/math.tan((90*(8-2)/8)*(2*math.pi/360)))*(180*(k+16)/20)/(1*math.sqrt(1+pow((1/math.tan((90*(8-2)/8)*(2*math.pi/360))),2)))))/((1/math.tan((90*(8-2)/8)*(2*math.pi/360))))))');
+			const y = py_eval('int(1*pow(math.exp(1),(math.log((1/math.tan((90*(8-2)/8)*(2*math.pi/360)))*(180*(k+16)/20)/(1*math.sqrt(1+pow((1/math.tan((90*(8-2)/8)*(2*math.pi/360))),2))))))*math.sin((math.log((1/math.tan((90*(8-2)/8)*(2*math.pi/360)))*(180*(k+16)/20)/(1*math.sqrt(1+pow((1/math.tan((90*(8-2)/8)*(2*math.pi/360))),2)))))/((1/math.tan((90*(8-2)/8)*(2*math.pi/360))))))');
+			foreach(q : py_range(8)) {
+				const rx = py_eval('int(x*math.cos(q*45*math.pi/180)-y*math.sin(q*45*math.pi/180))');
+				const ry = py_eval('int(x*math.sin(q*45*math.pi/180)+y*math.cos(q*45*math.pi/180))');
+				const nx = py_eval('int(math.cos(seta*math.pi/180)*rx-math.sin(seta*math.pi/180)*ry)');
+				const ny = py_eval('int(math.sin(seta*math.pi/180)*rx+math.cos(seta*math.pi/180)*ry)');
+				dots.append(list(2*nx, 2*ny));
+			}
+		}
+		dots.sort();
+		const actions = py_list();
+		const moveLoc = py_eval("lambda x_or_y, d0, d1: [] if d0 == d1 else SetMemory(0x58DC4C + 20 * locID + 8 + 4 * x_or_y, Add, d1 - d0)", py_globals() | py_locals());
+		const xy = list(0, 0);
+		foreach(nx, ny : dots) {
+			actions.append(moveLoc(0, xy[0], nx));
+			actions.append(moveLoc(1, xy[1], ny));
+			actions.append(CreateUnitWithProperties(1, EFFECT_UNIT, "unitAttach", CurrentPlayer, UnitProperty(invincible=true)));
+			xy[0] = nx;
+			xy[1] = ny;
+		}
+		DoActions(actions);
+		break;
+	}
+	EUDEndSwitch();
+	while (door >= 1) {
+	if (MemoryEPD(door + 0x64/4, Exactly, EFFECT_UNIT)
+	&& MemoryEPD(door + 0x110/4, Exactly, 0)) {
+		wwrite_epd(door + 0x110/4, 0, 2);  // removeTimer 설정
+	}
+	door = epdcunitread_epd(door + 0x4/4);  // 다음 door
+	}
+}
+
+function afterTriggerExec(){
+
+}

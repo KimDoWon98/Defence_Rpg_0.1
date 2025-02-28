@@ -1,0 +1,61 @@
+function respawn_safe() {
+    if(Memory(0x628438, Exactly, 0)) return False, False;  // Cannot create more unit
+    const ptr, epd = cunitepdread_epd(EPD(0x628438));
+    CreateUnit(1, "Artanis", "Anywhere", P1);
+    if(Memory(0x628438, Exactly, ptr)) return False, False;  // CreateUnit FAIL
+    return ptr, epd;
+}
+
+function is_alive(epd) {
+    if(epd < EPD(0x59CCA8)) return False;
+    if(epd > EPD(0x59CCA8 + 336 * 1699)) return False;
+    epd += 0x0C / 4;  // CSprite
+    if(MemoryEPD(epd, Exactly, 0)) return False;
+    return True;
+}
+
+function artanis_main() {
+    var ptr, epd;
+    var dx, dy;
+    static var timer = 2;
+    if(is_alive(epd)) {
+        if(MemoryXEPD(epd + 0x4D / 4, Exactly, 152 << 8, 0xFF00)) {  // Patrol
+            const x1, y1 = posread_epd(epd + 0x28 / 4);  // currentPosition
+            const x2, y2 = posread_epd(epd + 0x58 / 4);  // orderTargetXY
+            const x, y = x2 - x1, y2 - y1;
+            if(x || y) {
+                const angle = atan2(y, x);  // 360
+                dx, dy = lengthdir(30, angle);
+
+                // 각도 변했을 때 텍스트 출력
+                var prev_angle;
+                if(angle != prev_angle) {
+                    simpleprint("\x04angle =\x07", angle);
+                    prev_angle = angle;
+                }
+            }
+        }
+        if(dx || dy) {
+            setloc_epd("loc", epd + 0x28 / 4);  // currentPosition
+            if(timer <= 8) {
+                for(var i = timer; i >= 1; i--) addloc("loc", dx, dy);
+                CreateUnit(1, "Kakaru", "loc", P1);
+                KillUnit("Kakaru", P1);
+            }
+            timer++;
+            if(timer >= 12) timer = 2;
+        }
+    } else {
+        ptr, epd = respawn_safe();
+        if(ptr >= 0x59CCA8) {
+            setcurpl(P1);
+            CenterView("Anywhere");
+        }
+        dx, dy, timer = 0, 0, 2;
+    }
+}
+
+function afterTriggerExec() {
+    artanis_main();
+    dwwrite(0x6509A0, 0);
+}

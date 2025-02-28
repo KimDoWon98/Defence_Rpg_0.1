@@ -1,0 +1,79 @@
+var unitEPD;
+var globalX;
+var globalY;
+var skillUsing_list;
+
+const spell_list = [122, 146];
+
+function scanEffect(targetLoc, targetImage) {
+    wwrite(0x665AC0 + 1696 + 380 * 2, targetImage);
+    CreateUnit(1, 33, targetLoc, P1);
+    RemoveUnit(33, P1);
+}
+
+
+function getXY(epd) {
+    var x1, y1 = posread_epd(epd + 0x28/4);
+    var x2, y2 = posread_epd(epd + 0x58/4);
+    var x, y = x2 - x1, y2 - y1;
+    var deg = atan2(y, x);
+    var dx, dy = lengthdir(24, deg);
+    return dx, dy;
+}
+
+function spell_1(x, y) {
+    var timer;
+    if (timer == 0) {
+        MoveLocation("loc", "Dark Templar (Hero)", P1, "Anywhere");
+        timer++;
+    }
+    if (timer >= 1 && timer <= 20) {
+        addloc("loc", x, y);
+        scanEffect($L("loc"), 3);
+        timer++;
+    }
+    if (timer == 21) {
+        timer = 0;
+        skillUsing_list = 0;
+    }
+}
+
+function spell_2(x, y) {
+    var timer;
+    if (timer == 0) {
+        MoveLocation("loc", "Dark Templar (Hero)", P1, "Anywhere");
+        timer++;
+    }
+    if (timer >= 1 && timer <= 20) {
+        addloc("loc", x, y);
+        scanEffect($L("loc"), 4);
+        timer++;
+    }
+    if (timer == 21) {
+        timer = 0;
+        skillUsing_list = 0;
+    }
+}
+
+function onPluginStart() {
+    unitEPD = epdread_epd(EPD(0x628438));
+    CreateUnit(1, "Dark Templar (Hero)", "Anywhere", P1);
+}
+
+function afterTriggerExec() {
+    for (var i = 0; i < 2; i++) {
+        if (MemoryXEPD(unitEPD + 0x4D/4, Exactly, spell_list[i]*256, 0xFF00)) {
+            globalX, globalY = getXY(unitEPD);
+            skillUsing_list = i+1;
+            SetMemoryXEPD(unitEPD + 0x4D/4, SetTo, 2*256, 0xFF00);
+        }
+    }
+
+    if (skillUsing_list == 1) {
+        spell_1(globalX, globalY);
+    }
+
+    if (skillUsing_list == 2) {
+        spell_2(globalX, globalY);
+    }
+}
